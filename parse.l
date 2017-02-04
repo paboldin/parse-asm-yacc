@@ -6,26 +6,31 @@
 
 #include "y.tab.h"
 
-#define ENLIST(tkn) {				\
-	yylval = enlist_token(yytext, tkn);	\
-	return tkn;				\
+#define ENLIST(tkn) {							\
+	yylval = new_token(yytext, yyleng, yyspcbuf, yyspclen, tkn);	\
+	yyspclen = 0;							\
+	return tkn;							\
 }
 
+static char yyspcbuf[256];
+static int  yyspclen;
 
-YYSTYPE enlist_token(const char *text, int type)
+/* TODO(pboldin): Reuse yystate for that, do need for ->type */
+YYSTYPE new_token(const char *text, int l, const char *spc, int sl, int type)
 {
-	size_t s;
 	YYSTYPE t;
 	
-	s = strlen(text);
-	t = malloc(sizeof(*t) + s + 1);
+	t = malloc(sizeof(*t) + l + sl + 1);
 	if (t == NULL) abort();
 
 	t->length = 1;
 	t->lineno = yylineno;
 	t->type = type;
-	strcpy(t->txt, text);
 	t->prev = t->next = t;
+
+	strncpy(t->buf, spc, sl);
+	t->txt = t->buf + sl;
+	strncpy(t->txt, text, l);
 
 	return t;
 }
@@ -34,6 +39,7 @@ YYSTYPE enlist_token(const char *text, int type)
 %option yylineno
 
 ALNUM	[A-Za-z0-9_]
+ALNUMP	[A-Za-z0-9_.]
 DIGIT	[0-9]
 ALPHA	[A-Za-z_]
 HEX	[0-9A-Fa-f]
@@ -49,9 +55,9 @@ SPACE	[ \t]*
 ".subsection"	ENLIST(DIRECTIVE_SUBSECTION)
 ".previous"	ENLIST(DIRECTIVE_PREVIOUS)
 
-".text"		ENLIST(DIRECTIVE_TEXT)
-".data"		ENLIST(DIRECTIVE_DATA)
-".bss"		ENLIST(DIRECTIVE_BSS)
+.text[^;\n]*	ENLIST(DIRECTIVE_TEXT)
+.data[^;\n]*	ENLIST(DIRECTIVE_DATA)
+.bss[^;\n]*	ENLIST(DIRECTIVE_BSS)
 
 ".align"	|
 ".p2align"	ENLIST(DIRECTIVE_ALIGN)
@@ -89,18 +95,23 @@ SPACE	[ \t]*
 ".sleb128"	|
 ".4byte"	ENLIST(DIRECTIVE_DATA_DEF)
 
-{ALPHA}{ALNUM}*: { yytext[yyleng - 1] = '\0'; ENLIST(LABEL); }
+#[^\n]*		ENLIST(COMMENT)
+
+{ALPHA}{ALNUMP}*: { yyleng--; ENLIST(LABEL) }
 
 ({DIGIT}+|\.{ALPHA}{ALNUM}*):{SPACE} ENLIST(LLABEL)
 
 \"(\\.|[^\\"])*\"	ENLIST(TOKEN)
 [^ \t\n;,]+	ENLIST(TOKEN)	
 
-[ \t]+		ENLIST(SPACE)
+[ \t]+		{
+	strcpy(yyspcbuf, yytext);
+	yyspclen = yyleng;
+}
 
-;{SPACE}	ENLIST(SEMICOLON)
+;	ENLIST(SEMICOLON)
 {SPACE}\n	ENLIST(NEWLINE)
 
-,{SPACE}	ENLIST(COMMA)
+,	ENLIST(COMMA)
 
 %%
