@@ -21,6 +21,8 @@ YYSTYPE enlist_token(const char *text, int type)
 	t = malloc(sizeof(*t) + s + 1);
 	if (t == NULL) abort();
 
+	t->length = 1;
+	t->lineno = yylineno;
 	t->type = type;
 	strcpy(t->txt, text);
 	t->prev = t->next = t;
@@ -41,34 +43,53 @@ SPACE	[ \t]*
 
 
 
-".section"	ENLIST(DIR_SECTION)
-".pushsection"	ENLIST(DIR_PUSHSECTION)
-".popsection"	ENLIST(DIR_POPSECTION)
-".subsection"	ENLIST(DIR_SUBSECTION)
-".previous"	ENLIST(DIR_PREVIOUS)
+".section"	ENLIST(DIRECTIVE_SECTION)
+".pushsection"	ENLIST(DIRECTIVE_PUSHSECTION)
+".popsection"	ENLIST(DIRECTIVE_POPSECTION)
+".subsection"	ENLIST(DIRECTIVE_SUBSECTION)
+".previous"	ENLIST(DIRECTIVE_PREVIOUS)
 
-".text"		ENLIST(DIR_TEXT)
-".data"		ENLIST(DIR_DATA)
-".bss"		ENLIST(DIR_BSS)
+".text"		ENLIST(DIRECTIVE_TEXT)
+".data"		ENLIST(DIRECTIVE_DATA)
+".bss"		ENLIST(DIRECTIVE_BSS)
 
-".align"	ENLIST(DIR_ALIGN)
-".type"		ENLIST(DIR_TYPE)
-".comm"		ENLIST(DIR_COMM)
-".weak"		ENLIST(DIR_WEAK)
-".size"		ENLIST(DIR_SIZE)
+".align"	|
+".p2align"	ENLIST(DIRECTIVE_ALIGN)
+".type"		ENLIST(DIRECTIVE_TYPE)
+".comm"		ENLIST(DIRECTIVE_COMM)
+".weak"		ENLIST(DIRECTIVE_WEAK)
+".size"		ENLIST(DIRECTIVE_SIZE)
 
-".globl"	ENLIST(DIR_GLOBL)
-".local"	ENLIST(DIR_LOCAL)
-".hidden"	ENLIST(DIR_HIDDEN)
-".protected"	ENLIST(DIR_PROTECTED)
-".internal"	ENLIST(DIR_INTERNAL)
-".set"		ENLIST(DIR_SET)
+".globl"	ENLIST(DIRECTIVE_GLOBL)
+".local"	ENLIST(DIRECTIVE_LOCAL)
+".hidden"	ENLIST(DIRECTIVE_HIDDEN)
+".protected"	ENLIST(DIRECTIVE_PROTECTED)
+".internal"	ENLIST(DIRECTIVE_INTERNAL)
+".set"		ENLIST(DIRECTIVE_SET)
 
-".file"		ENLIST(DIR_FILE)
-".loc"		ENLIST(DIR_LOC)
-.cfi[^;\n]*	ENLIST(DIR_CFI_IGNORED)
+".file"		ENLIST(DIRECTIVE_FILE)
+.loc[^;\n]*	ENLIST(DIRECTIVE_LOC_IGNORED)
+.cfi[^;\n]*	ENLIST(DIRECTIVE_CFI_IGNORED)
 
-{ALPHA}{ALNUM}*:{SPACE} ENLIST(LABEL)
+".ascii"	|
+".asciz"	|
+".string"	|
+".byte"		|
+".word"		|
+".short"	|
+".int"		|
+".long"		|
+".quad"		|
+".single"	|
+".float"	|
+".double"	|
+".value"	|
+".zero"		|
+".uleb128"	|
+".sleb128"	|
+".4byte"	ENLIST(DIRECTIVE_DATA_DEF)
+
+{ALPHA}{ALNUM}*: { yytext[yyleng - 1] = '\0'; ENLIST(LABEL); }
 
 ({DIGIT}+|\.{ALPHA}{ALNUM}*):{SPACE} ENLIST(LLABEL)
 
@@ -77,7 +98,8 @@ SPACE	[ \t]*
 
 [ \t]+		ENLIST(SPACE)
 
-;{SPACE}|{SPACE}\n	ENLIST(NEWLINE_OR_SEMICOLON)
+;{SPACE}	ENLIST(SEMICOLON)
+{SPACE}\n	ENLIST(NEWLINE)
 
 ,{SPACE}	ENLIST(COMMA)
 
