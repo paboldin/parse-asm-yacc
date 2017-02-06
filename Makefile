@@ -1,5 +1,8 @@
 
-CFLAGS ?= -DYYDEBUG=1
+
+ifeq ($(NDEBUG),)
+CFLAGS := -DYYDEBUG=1
+endif
 CFLAGS += -DYYERROR_VERBOSE=1
 
 all: parser

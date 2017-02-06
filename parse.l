@@ -7,16 +7,15 @@
 #include "y.tab.h"
 
 #define ENLIST(tkn) {							\
-	yylval = new_token(yytext, yyleng, yyspcbuf, yyspclen, tkn);	\
+	yylval = new_token(yytext, yyleng, yyspclen, tkn);		\
 	yyspclen = 0;							\
 	return tkn;							\
 }
 
-static char yyspcbuf[256];
-static int  yyspclen;
+static int yyspclen;
 
 /* TODO(pboldin): Reuse yystate for that, do need for ->type */
-YYSTYPE new_token(const char *text, int l, const char *spc, int sl, int type)
+YYSTYPE new_token(const char *text, int l, int sl, int type)
 {
 	YYSTYPE t;
 	
@@ -28,9 +27,8 @@ YYSTYPE new_token(const char *text, int l, const char *spc, int sl, int type)
 	t->type = type;
 	t->prev = t->next = t;
 
-	strncpy(t->buf, spc, sl);
+	strncpy(t->buf, text, l);
 	t->txt = t->buf + sl;
-	strncpy(t->txt, text, l);
 
 	return t;
 }
@@ -44,6 +42,7 @@ DIGIT	[0-9]
 ALPHA	[A-Za-z_]
 HEX	[0-9A-Fa-f]
 SPACE	[ \t]*
+REST	[ \t]+[^;\n]*
 
 %%
 
@@ -55,12 +54,12 @@ SPACE	[ \t]*
 ".subsection"	ENLIST(DIRECTIVE_SUBSECTION)
 ".previous"	ENLIST(DIRECTIVE_PREVIOUS)
 
-.text[^;\n]*	ENLIST(DIRECTIVE_TEXT)
-.data[^;\n]*	ENLIST(DIRECTIVE_DATA)
-.bss[^;\n]*	ENLIST(DIRECTIVE_BSS)
+\.text{REST}	ENLIST(DIRECTIVE_TEXT)
+\.data{REST}	ENLIST(DIRECTIVE_DATA)
+\.bss{REST}	ENLIST(DIRECTIVE_BSS)
 
-".align"	|
-".p2align"	ENLIST(DIRECTIVE_ALIGN)
+\.(balign|align|p2align){REST} ENLIST(DIRECTIVE_ALIGN)
+
 ".type"		ENLIST(DIRECTIVE_TYPE)
 ".comm"		ENLIST(DIRECTIVE_COMM)
 ".weak"		ENLIST(DIRECTIVE_WEAK)
@@ -74,26 +73,11 @@ SPACE	[ \t]*
 ".set"		ENLIST(DIRECTIVE_SET)
 
 ".file"		ENLIST(DIRECTIVE_FILE)
-.loc[^;\n]*	ENLIST(DIRECTIVE_LOC_IGNORED)
-.cfi[^;\n]*	ENLIST(DIRECTIVE_CFI_IGNORED)
+\.loc{REST}	ENLIST(DIRECTIVE_LOC_IGNORED)
+\.cfi{REST}	ENLIST(DIRECTIVE_CFI_IGNORED)
 
-".ascii"	|
-".asciz"	|
-".string"	|
-".byte"		|
-".word"		|
-".short"	|
-".int"		|
-".long"		|
-".quad"		|
-".single"	|
-".float"	|
-".double"	|
-".value"	|
-".zero"		|
-".uleb128"	|
-".sleb128"	|
-".4byte"	ENLIST(DIRECTIVE_DATA_DEF)
+\.(ascii|asciz|string|byte|word|short|int|long|quad|single){REST} |
+\.(float|double|value|zero|uleb128|sleb128|4byte){REST}	ENLIST(DIRECTIVE_DATA_DEF)
 
 #[^\n]*		ENLIST(COMMENT)
 
@@ -104,10 +88,7 @@ SPACE	[ \t]*
 \"(\\.|[^\\"])*\"	ENLIST(TOKEN)
 [^ \t\n;,]+	ENLIST(TOKEN)	
 
-[ \t]+		{
-	strcpy(yyspcbuf, yytext);
-	yyspclen = yyleng;
-}
+[ \t]+		{ yyspclen = yyleng; yymore(); }
 
 ;	ENLIST(SEMICOLON)
 {SPACE}\n	ENLIST(NEWLINE)
