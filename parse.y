@@ -38,9 +38,9 @@ getsymbol(const char *name);
 static void
 print_list(YYSTYPE l);
 static void
-print_tokens(token_t *t, const char *prefix);
+print_siblings(list_t *list, const char *prefix);
 
-static void print_dbgfilter(YYSTYPE l);
+static void print_dbgfilter(token_t *l);
 
 extern FILE* yyin;
 
@@ -62,13 +62,19 @@ void yyerror(const char *msg)
 	/*print_list(yyval);*/							\
 } while (0)
 
-#define next_token(tkn) list_entry(tkn->list.next, token_t, list)
-#define next_sibling(tkn) list_entry(tkn->siblings.next, token_t, siblings)
+#define token_next(tkn) list_entry(tkn->list.next, token_t, list)
+#define sibling_next(tkn) list_entry(tkn->siblings.next, token_t, siblings)
+
+#define list_for_each_entry(typeof_pos, pos, head, member) \
+        for (pos = list_entry((head)->next, typeof_pos, member); \
+             &pos->member != (head); \
+             pos = list_entry(pos->member.next, typeof_pos, member))
+
 
 struct statement {
 	list_t list;
 	int type;
-	token_t *tokens;
+	list_t tokens;
 };
 
 static list_t statements;
@@ -79,14 +85,24 @@ new_statement(token_t *tokens);
 void
 print_statements(void)
 {
-	list_t *head = &statements;
 	struct statement *stmt;
 
-	for (stmt = list_entry(head->next, struct statement, list);
-	     &stmt->list != head;
-	     stmt = list_entry(stmt->list.next, struct statement, list)) {
-		print_tokens(stmt->tokens, NULL);
+	list_for_each_entry(struct statement, stmt, &statements, list) {
+		print_siblings(&stmt->tokens, NULL);
 	}
+}
+
+static struct statement *
+find_statement(token_t *tkn)
+{
+	token_t *sbl = tkn, *nxt = tkn;
+
+	do {
+		sbl = sibling_next(sbl);
+		nxt = token_next(nxt);
+	} while (sbl == nxt);
+
+	return list_entry(&sbl->siblings, struct statement, tokens);
 }
 
 %}
@@ -99,7 +115,7 @@ print_statements(void)
 %token DIRECTIVE_ALIGN DIRECTIVE_TYPE DIRECTIVE_COMM DIRECTIVE_WEAK DIRECTIVE_SIZE
 %token DIRECTIVE_GLOBL DIRECTIVE_LOCAL DIRECTIVE_HIDDEN DIRECTIVE_PROTECTED DIRECTIVE_INTERNAL DIRECTIVE_SET
 %token DIRECTIVE_FILE DIRECTIVE_LOC_IGNORED DIRECTIVE_CFI_IGNORED
-%token DIRECTIVE_DATA_DEF DIRECTIVE_STRING
+%token DIRECTIVE_DATA_DEF DIRECTIVE_STRING DIRECTIVE_IDENT
 %token COMMENT STATEMENT
 
 %start file
@@ -158,7 +174,6 @@ directive:
 	}
       |  DIRECTIVE_SET	TOKEN COMMA TOKEN {
 		APPEND(4);
-		getsymbol($2->txt)->weak = $$;
 	}
 
       |  DIRECTIVE_GLOBL TOKEN {
@@ -196,7 +211,8 @@ directive:
       |  DIRECTIVE_DATA_DEF
       |  DIRECTIVE_CFI_IGNORED
       |  DIRECTIVE_LOC_IGNORED
-      |  DIRECTIVE_STRING TOKEN { APPEND(2); };
+      |  DIRECTIVE_STRING TOKEN { APPEND(2); }
+      |  DIRECTIVE_IDENT TOKEN { APPEND(2); };
 
 
 label:
@@ -253,7 +269,7 @@ lines:
      |  line;
 
 file:
-    lines { print_list($$); }
+    lines { print_dbgfilter($$); }
 
 %%
 
@@ -302,7 +318,10 @@ new_statement(token_t *tokens)
 		abort();
 
 	stmt->type = tokens->type;
-	stmt->tokens = tokens;
+
+	list_init(&stmt->tokens);
+	list_append(&stmt->tokens, &tokens->siblings);
+
 	list_init(&stmt->list);
 	list_append(&statements, &stmt->list);
 
@@ -341,20 +360,39 @@ previoussection()
 }
 
 void
+print_siblings(list_t *list, const char *prefix)
+{
+	token_t *token;
+
+	if (list->next == list)
+		return;
+
+	list_for_each_entry(token_t, token, list, siblings) {
+		if (prefix != NULL) {
+			printf("%s(l%d)", prefix, token->lineno);
+			prefix = NULL;
+		}
+		printf("(%s)%s", yytname[token->type - 255], token->buf);
+	}
+	printf("\n");
+}
+
+void
 print_tokens(token_t *t, const char *prefix)
 {
-	token_t *l = t;
-
-	if (l == NULL)
+	token_t *nsbl = t, *ntkn = t;
+	if (t == NULL)
 		return;
 
 	if (prefix != NULL)
-		printf("%s(l%d)", prefix, l->lineno);
+		printf("%s(l%d)", prefix, t->lineno);
 
 	do {
-		printf("(%s)%s", yytname[l->type - 255], l->txt);
-		l = next_sibling(l);
-	} while (l != t);
+		printf("(%s)%s", yytname[ntkn->type - 255], ntkn->buf);
+
+		nsbl = sibling_next(nsbl);
+		ntkn = token_next(ntkn);
+	} while (nsbl == ntkn);
 	printf("\n");
 }
 
@@ -384,9 +422,9 @@ print_symbols(struct symbol *h)
 }
 
 void
-print_dbgfilter(YYSTYPE l)
+print_dbgfilter(token_t *l)
 {
-	YYSTYPE h = l;
+	token_t *h = l;
 	int newline = 1, dbgsection = 0;
 
 	do {
@@ -394,10 +432,10 @@ print_dbgfilter(YYSTYPE l)
 		    h->type == DIRECTIVE_PUSHSECTION) {
 			/* FIXME(pboldin) account for POPSECTION */
 			dbgsection = !strncmp(
-				next_token(h)->txt,
+				token_next(h)->txt,
 				".debug", 6);
 		}
-		if (newline &&
+		if (newline && h->type != DIRECTIVE_IDENT &&
 		    (h->type == DIRECTIVE_CFI_IGNORED ||
 		     h->type == DIRECTIVE_LOC_IGNORED ||
 		     dbgsection)) {
@@ -408,7 +446,7 @@ print_dbgfilter(YYSTYPE l)
 		else
 			printf("%s", h->buf);
 		newline = h->type == NEWLINE;
-		h = next_token(h);
+		h = token_next(h);
 	} while (h != l);
 }
 
@@ -422,7 +460,7 @@ _print_list(YYSTYPE l)
 
 	do {
 		printf("(%s)%s", yytname[h->type - 255], h->buf);
-		h = next_token(h);
+		h = token_next(h);
 	} while (h != l);
 }
 
@@ -449,4 +487,5 @@ int main(int argc, char **argv) {
   list_init(&statements);
   yyparse();
   print_statements();
+  print_symbols(symbols);
 }
