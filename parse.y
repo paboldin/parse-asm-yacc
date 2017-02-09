@@ -50,19 +50,17 @@ void yyerror(const char *msg)
 	fprintf(stderr, "l%d: %s\n", yylineno, msg);
 }
 
-/* TODO(pboldin) We need a proper AST.
- * * Collapse DIRECTIVE*s into a parent with tokens as children.
- * * Collapse statements into a parent with tokens as children.
- */
 #define APPEND(n) do {						\
 	int i = n - 1;						\
 	yyval = yyvsp[-i];					\
 	yyval->length = i + 1;					\
 	for (i--; i >= 0; i--)	{				\
-		append(yyval, yyvsp[-i]);			\
+		list_append(&yyval->list, &yyvsp[-i]->list);	\
 	}							\
 	/*print_list(yyval);*/					\
 } while (0)
+
+#define next_token(tkn) list_entry(tkn->list.next, token_t, list)
 
 %}
 
@@ -195,16 +193,21 @@ statements:
 	|	statement;
 
 comment_with_newline:
-		COMMENT	NEWLINE { $$ = $1; append($1, $2); }
+		COMMENT	NEWLINE { $$ = $1; list_append(&$1->list, &$2->list); }
 	|	NEWLINE;
 
 line:
-		statements comment_with_newline { $$ = $1; append($1, $2); }
+		statements comment_with_newline {
+			$$ = $1;
+			list_append(&$1->list, &$2->list);
+		}
 	|	statements
 	|	comment_with_newline;
 
 lines:
-	lines line { $$ = $1; append($1, $2); }
+	lines line {
+		$$ = $1;
+		list_append(&$1->list, &$2->list); }
      |  line;
 
 file:
@@ -292,7 +295,7 @@ print_tokens(YYSTYPE l, const char *prefix)
 
 	while (len-- > 0) {
 		printf("(%s)%s", yytname[l->type - 255], l->txt);
-		l = l->next;
+		l = next_token(l);
 	}
 	printf("\n");
 }
@@ -332,7 +335,9 @@ print_dbgfilter(YYSTYPE l)
 		if (h->type == DIRECTIVE_SECTION ||
 		    h->type == DIRECTIVE_PUSHSECTION) {
 			/* FIXME(pboldin) account for POPSECTION */
-			dbgsection = !strncmp(h->next->txt, ".debug", 6);
+			dbgsection = !strncmp(
+				next_token(h)->txt,
+				".debug", 6);
 		}
 		if (newline &&
 		    (h->type == DIRECTIVE_CFI_IGNORED ||
@@ -345,7 +350,7 @@ print_dbgfilter(YYSTYPE l)
 		else
 			printf("%s", h->buf);
 		newline = h->type == NEWLINE;
-		h = h->next;
+		h = next_token(h);
 	} while (h != l);
 }
 
@@ -359,9 +364,7 @@ _print_list(YYSTYPE l)
 
 	do {
 		printf("(%s)%s", yytname[h->type - 255], h->buf);
-		if (h->next->prev != h || h->prev->next != h)
-			abort();
-		h = h->next;
+		h = next_token(h);
 	} while (h != l);
 }
 

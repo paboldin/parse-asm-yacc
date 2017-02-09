@@ -25,7 +25,7 @@ YYSTYPE new_token(const char *text, int l, int sl, int type)
 	t->length = 1;
 	t->lineno = yylineno;
 	t->type = type;
-	t->prev = t->next = t;
+	list_init(&t->list);
 
 	strncpy(t->buf, text, l);
 	t->txt = t->buf + sl;

@@ -4,33 +4,50 @@
 
 #define YYSTYPE_IS_DECLARED	1
 
-struct yystype {
-	struct yystype *next, *prev;
+typedef struct list {
+	struct list *next, *prev;
+} list_t;
+
+typedef struct token {
+	list_t list;
 
 	int type;
 	int length, spclength;
 	int lineno;
 	char *txt;
 	char buf[];
-};
+} token_t;
 
-typedef struct yystype *YYSTYPE;
+typedef token_t *YYSTYPE;
+
+#define offsetof(TYPE, MEMBER)	((unsigned long) &((TYPE *)0)->MEMBER)
+#define container_of(ptr, type, member)	\
+	((type *)(((void *)(ptr)) - offsetof(type, member)))
+
+#define list_entry(ptr, type, member)	\
+	container_of(ptr, type, member)
 
 static inline void
-printlist(YYSTYPE head)
+list_init(list_t *list)
 {
-	YYSTYPE h = head;
+	list->next = list->prev = list;
+}
+
+static inline void
+printlist(token_t *head)
+{
+	token_t *h = head;
 
 	do {
 		printf("(%p:%d)'%s'\n", h, h->type, h->txt);
-		h = h->next;
+		h = list_entry(h->list.next, token_t, list);
 	} while (h != head);
 }
 
 static inline void
-append(YYSTYPE head, YYSTYPE new)
+list_append(list_t *head, list_t *new)
 {
-	YYSTYPE head_prev = head->prev;
+	list_t *head_prev = head->prev;
 
 	new->prev->next = head;
 	head->prev->next = new;
