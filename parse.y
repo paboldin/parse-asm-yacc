@@ -37,6 +37,8 @@ static struct symbol *
 getsymbol(const char *name);
 static void
 print_list(YYSTYPE l);
+static void
+print_tokens(token_t *t, const char *prefix);
 
 static void print_dbgfilter(YYSTYPE l);
 
@@ -50,17 +52,42 @@ void yyerror(const char *msg)
 	fprintf(stderr, "l%d: %s\n", yylineno, msg);
 }
 
-#define APPEND(n) do {						\
-	int i = n - 1;						\
-	yyval = yyvsp[-i];					\
-	yyval->length = i + 1;					\
-	for (i--; i >= 0; i--)	{				\
-		list_append(&yyval->list, &yyvsp[-i]->list);	\
-	}							\
-	/*print_list(yyval);*/					\
+#define APPEND(n) do {								\
+	int i = n - 1;								\
+	yyval = yyvsp[-i];							\
+	for (i--; i >= 0; i--)	{						\
+		list_append(&yyval->list, &yyvsp[-i]->list);			\
+		list_append(&yyval->siblings, &yyvsp[-i]->siblings);		\
+	}									\
+	/*print_list(yyval);*/							\
 } while (0)
 
 #define next_token(tkn) list_entry(tkn->list.next, token_t, list)
+#define next_sibling(tkn) list_entry(tkn->siblings.next, token_t, siblings)
+
+struct statement {
+	list_t list;
+	int type;
+	token_t *tokens;
+};
+
+static list_t statements;
+
+static struct statement *
+new_statement(token_t *tokens);
+
+void
+print_statements(void)
+{
+	list_t *head = &statements;
+	struct statement *stmt;
+
+	for (stmt = list_entry(head->next, struct statement, list);
+	     &stmt->list != head;
+	     stmt = list_entry(stmt->list.next, struct statement, list)) {
+		print_tokens(stmt->tokens, NULL);
+	}
+}
 
 %}
 
@@ -68,10 +95,12 @@ void yyerror(const char *msg)
 
 %token DIRECTIVE_SECTION DIRECTIVE_PUSHSECTION DIRECTIVE_POPSECTION DIRECTIVE_SUBSECTION DIRECTIVE_PREVIOUS
 %token DIRECTIVE_TEXT DIRECTIVE_DATA DIRECTIVE_BSS
+
 %token DIRECTIVE_ALIGN DIRECTIVE_TYPE DIRECTIVE_COMM DIRECTIVE_WEAK DIRECTIVE_SIZE
 %token DIRECTIVE_GLOBL DIRECTIVE_LOCAL DIRECTIVE_HIDDEN DIRECTIVE_PROTECTED DIRECTIVE_INTERNAL DIRECTIVE_SET
 %token DIRECTIVE_FILE DIRECTIVE_LOC_IGNORED DIRECTIVE_CFI_IGNORED
-%token DIRECTIVE_DATA_DEF COMMENT
+%token DIRECTIVE_DATA_DEF DIRECTIVE_STRING
+%token COMMENT STATEMENT
 
 %start file
 
@@ -166,7 +195,9 @@ directive:
 	}
       |  DIRECTIVE_DATA_DEF
       |  DIRECTIVE_CFI_IGNORED
-      |  DIRECTIVE_LOC_IGNORED;
+      |  DIRECTIVE_LOC_IGNORED
+      |  DIRECTIVE_STRING TOKEN { APPEND(2); };
+
 
 label:
 		LABEL
@@ -187,13 +218,24 @@ statement:
 
 statements:
 		statements SEMICOLON statement {
-			APPEND(3);
+			new_statement($3);
+
+			$$ = $1;
+			list_append(&$1->list, &$2->list);
+			list_append(&$1->list, &$3->list);
 		}
-	|	statement SEMICOLON { APPEND(2); }
-	|	statement;
+	|	statement SEMICOLON {
+			new_statement($1);
+
+			$$ = $1;
+			list_append(&$1->list, &$2->list);
+		}
+	|	statement { $$ = $1; new_statement($1); };
 
 comment_with_newline:
-		COMMENT	NEWLINE { $$ = $1; list_append(&$1->list, &$2->list); }
+		COMMENT	NEWLINE {
+			$$ = $1; list_append(&$1->list, &$2->list);
+		}
 	|	NEWLINE;
 
 line:
@@ -250,6 +292,23 @@ link:
 	return symbols;
 }
 
+static struct statement *
+new_statement(token_t *tokens)
+{
+	struct statement *stmt;
+
+	stmt = malloc(sizeof(*stmt));
+	if (stmt == NULL)
+		abort();
+
+	stmt->type = tokens->type;
+	stmt->tokens = tokens;
+	list_init(&stmt->list);
+	list_append(&statements, &stmt->list);
+
+	return stmt;
+}
+
 static void
 setsection(const char *name)
 {
@@ -282,21 +341,20 @@ previoussection()
 }
 
 void
-print_tokens(YYSTYPE l, const char *prefix)
+print_tokens(token_t *t, const char *prefix)
 {
-	int len;
+	token_t *l = t;
 
 	if (l == NULL)
 		return;
 
-	len = l->length;
+	if (prefix != NULL)
+		printf("%s(l%d)", prefix, l->lineno);
 
-	printf("%s(l%d)", prefix, l->lineno);
-
-	while (len-- > 0) {
+	do {
 		printf("(%s)%s", yytname[l->type - 255], l->txt);
-		l = next_token(l);
-	}
+		l = next_sibling(l);
+	} while (l != t);
 	printf("\n");
 }
 
@@ -388,5 +446,7 @@ int main(int argc, char **argv) {
     }
   }
   section = getsymbol(".text");
-  return yyparse();
+  list_init(&statements);
+  yyparse();
+  print_statements();
 }

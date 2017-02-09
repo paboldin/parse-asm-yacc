@@ -22,10 +22,10 @@ YYSTYPE new_token(const char *text, int l, int sl, int type)
 	t = malloc(sizeof(*t) + l + sl + 1);
 	if (t == NULL) abort();
 
-	t->length = 1;
 	t->lineno = yylineno;
 	t->type = type;
 	list_init(&t->list);
+	list_init(&t->siblings);
 
 	strncpy(t->buf, text, l);
 	t->txt = t->buf + sl;
@@ -76,8 +76,10 @@ REST	[ \t]+[^;\n]*
 \.loc{REST}	ENLIST(DIRECTIVE_LOC_IGNORED)
 \.cfi{REST}	ENLIST(DIRECTIVE_CFI_IGNORED)
 
-\.(ascii|asciz|string|byte|word|short|int|long|quad|single){REST} |
+\.(byte|word|short|int|long|quad|single){REST} |
 \.(float|double|value|zero|uleb128|sleb128|4byte){REST}	ENLIST(DIRECTIVE_DATA_DEF)
+
+\.(ascii|asciz|string)	ENLIST(DIRECTIVE_STRING)
 
 #[^\n]*		ENLIST(COMMENT)
 

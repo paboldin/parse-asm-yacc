@@ -9,10 +9,14 @@ typedef struct list {
 } list_t;
 
 typedef struct token {
+	/* list of all tokens */
 	list_t list;
 
+	/* list of all tokens of the particular statement or directive */
+	list_t siblings;
+
 	int type;
-	int length, spclength;
+	int spclength;
 	int lineno;
 	char *txt;
 	char buf[];
@@ -34,17 +38,6 @@ list_init(list_t *list)
 }
 
 static inline void
-printlist(token_t *head)
-{
-	token_t *h = head;
-
-	do {
-		printf("(%p:%d)'%s'\n", h, h->type, h->txt);
-		h = list_entry(h->list.next, token_t, list);
-	} while (h != head);
-}
-
-static inline void
 list_append(list_t *head, list_t *new)
 {
 	list_t *head_prev = head->prev;
@@ -53,6 +46,24 @@ list_append(list_t *head, list_t *new)
 	head->prev->next = new;
 	head->prev = new->prev;
 	new->prev = head_prev;
+}
+
+static inline void
+list_del(list_t *list)
+{
+	list->prev->next = list->next;
+	list->next->prev = list->prev;
+}
+
+static inline void
+printlist(token_t *head)
+{
+	token_t *h = head;
+
+	do {
+		printf("(%p:%d)'%s'\n", h, h->type, h->txt);
+		h = list_entry(h->list.next, token_t, list);
+	} while (h != head);
 }
 
 #endif /* _PARSE_H_INCLUDED_ */
