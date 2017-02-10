@@ -441,7 +441,7 @@ print_dbgfilter(token_t *l)
 		     dbgsection)) {
 			printf("# ");
 		}
-		if (h->type == LABEL)
+		if (h->type == LABEL || h->type == LLABEL)
 			printf("%s:", h->buf);
 		else
 			printf("%s", h->buf);

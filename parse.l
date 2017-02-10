@@ -86,7 +86,7 @@ REST	[ \t]+[^;\n]*
 
 {ALPHA}{ALNUMP}*: { yyleng--; ENLIST(LABEL) }
 
-({DIGIT}+|\.{ALPHA}{ALNUM}*):{SPACE} ENLIST(LLABEL)
+({DIGIT}+|\.{ALPHA}{ALNUM}*): { yyleng--; ENLIST(LLABEL) }
 
 \"(\\.|[^\\"])*\"	ENLIST(TOKEN)
 [^ \t\n;,]+	ENLIST(TOKEN)	
