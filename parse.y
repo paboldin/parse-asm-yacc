@@ -107,6 +107,7 @@ find_statement(token_t *tkn)
 
 %}
 
+%expect 1
 %token LABEL LLABEL TOKEN SPACE NEWLINE SEMICOLON COMMA
 
 %token DIRECTIVE_SECTION DIRECTIVE_PUSHSECTION DIRECTIVE_POPSECTION DIRECTIVE_SUBSECTION DIRECTIVE_PREVIOUS
@@ -146,14 +147,14 @@ directive_section_args:
 directive_section:
 		DIRECTIVE_SECTION directive_section_args {
 			APPEND(2);
-			setsection($2->txt);
+			setsection($directive_section_args->txt);
 		}
 	|	DIRECTIVE_TEXT { setsection(".text"); }
 	|	DIRECTIVE_DATA { setsection(".data"); }
 	|	DIRECTIVE_BSS  { setsection(".bss"); }
 	|	DIRECTIVE_PUSHSECTION directive_section_args {
 			APPEND(2);
-			setsection($2->txt);
+			setsection($directive_section_args->txt);
 		}
 	|	DIRECTIVE_SUBSECTION TOKEN {
 			APPEND(2);
@@ -168,45 +169,45 @@ directive:
       |  DIRECTIVE_COMM tokens_comma { APPEND(2); }
 
       |  DIRECTIVE_ALIGN
-      |  DIRECTIVE_WEAK	TOKEN {
+      |  DIRECTIVE_WEAK	TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($2->txt)->weak = $$;
+		getsymbol($symbol->txt)->weak = $$;
 	}
       |  DIRECTIVE_SET	TOKEN COMMA TOKEN {
 		APPEND(4);
 	}
 
-      |  DIRECTIVE_GLOBL TOKEN {
+      |  DIRECTIVE_GLOBL TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($2->txt)->globl_or_local = $$;
+		getsymbol($symbol->txt)->globl_or_local = $$;
 	}
-      |  DIRECTIVE_LOCAL TOKEN {
+      |  DIRECTIVE_LOCAL TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($2->txt)->globl_or_local = $$;
+		getsymbol($symbol->txt)->globl_or_local = $$;
 	}
-      |  DIRECTIVE_HIDDEN TOKEN {
+      |  DIRECTIVE_HIDDEN TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($2->txt)->hidden = $$;
+		getsymbol($symbol->txt)->hidden = $$;
 	}
-      |  DIRECTIVE_PROTECTED TOKEN {
+      |  DIRECTIVE_PROTECTED TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($2->txt)->protected = $$;
+		getsymbol($symbol->txt)->protected = $$;
 	}
-      |  DIRECTIVE_INTERNAL TOKEN {
+      |  DIRECTIVE_INTERNAL TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($2->txt)->internal = $$;
+		getsymbol($symbol->txt)->internal = $$;
 	}
 
-      |  DIRECTIVE_TYPE TOKEN COMMA TOKEN {
+      |  DIRECTIVE_TYPE TOKEN[symbol] COMMA TOKEN[type] {
 		struct symbol *s;
 		APPEND(4);
-		s = getsymbol($2->txt);
+		s = getsymbol($symbol->txt);
 		s->type = $$;
-		s->symbol_type = strcmp($4->txt, "@function") == 0 ? STT_FUNC : STT_OBJECT;
+		s->symbol_type = strcmp($type->txt, "@function") == 0 ? STT_FUNC : STT_OBJECT;
 	}
-      |  DIRECTIVE_SIZE TOKEN COMMA TOKEN {
+      |  DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN[size] {
 		APPEND(4);
-		getsymbol($2->txt)->size = $$;
+		getsymbol($symbol->txt)->size = $size;
 	}
       |  DIRECTIVE_DATA_DEF
       |  DIRECTIVE_CFI_IGNORED
@@ -233,34 +234,28 @@ statement:
 	|	labels;
 
 statements:
-		statements SEMICOLON statement {
-			new_statement($3);
+		statements[head] SEMICOLON[semicolon] statement {
+			new_statement($statement);
 
-			$$ = $1;
-			list_append(&$1->list, &$2->list);
-			list_append(&$1->list, &$3->list);
+			$$ = $head;
+			list_append(&$head->list, &$semicolon->list);
+			list_append(&$head->list, &$statement->list);
 		}
-	|	statement SEMICOLON {
-			new_statement($1);
+	|	statement SEMICOLON[semicolon] {
+			new_statement($statement);
 
-			$$ = $1;
-			list_append(&$1->list, &$2->list);
+			$$ = $statement;
+			list_append(&$statement->list, &$semicolon->list);
 		}
-	|	statement { $$ = $1; new_statement($1); };
-
-comment_with_newline:
-		COMMENT	NEWLINE {
-			$$ = $1; list_append(&$1->list, &$2->list);
-		}
-	|	NEWLINE;
+	|	statement { $$ = $statement; new_statement($statement); };
 
 line:
-		statements comment_with_newline {
+		statements COMMENT NEWLINE {
 			$$ = $1;
 			list_append(&$1->list, &$2->list);
 		}
-	|	statements
-	|	comment_with_newline;
+	|	statements NEWLINE
+	|	COMMENT NEWLINE;
 
 lines:
 	lines line {
