@@ -19,11 +19,6 @@ struct symbol {
 	struct symbol *next;
 };
 
-static struct symbol *section, *prev_section;
-
-/* LRU with symbols */
-static struct symbol *symbols;
-
 static const char *const yytname[];
 
 static void
@@ -77,17 +72,26 @@ struct statement {
 	list_t tokens;
 };
 
-static list_t statements;
+struct document_tree {
+	list_t statements;
+
+	struct symbol *section, *prev_section;
+
+	/* LRU with symbols */
+	struct symbol *symbols;
+};
+
+extern struct document_tree *document;
 
 static struct statement *
 new_statement(token_t *tokens);
 
 void
-print_statements(void)
+print_statements(struct document_tree *tree)
 {
 	struct statement *stmt;
 
-	list_for_each_entry(struct statement, stmt, &statements, list) {
+	list_for_each_entry(struct statement, stmt, &tree->statements, list) {
 		print_siblings(&stmt->tokens, NULL);
 	}
 }
@@ -250,12 +254,21 @@ statements:
 	|	statement { $$ = $statement; new_statement($statement); };
 
 line:
-		statements COMMENT NEWLINE {
-			$$ = $1;
-			list_append(&$1->list, &$2->list);
+		statements COMMENT[comment] NEWLINE[newline] {
+			$$ = $statements;
+
+			list_append(&$statements->list, &$comment->list);
+			list_append(&$statements->list, &$newline->list);
 		}
-	|	statements NEWLINE
-	|	COMMENT NEWLINE;
+	|	statements NEWLINE[newline] {
+			$$ = $statements;
+
+			list_append(&$statements->list, &$newline->list);
+		}
+	|	COMMENT[comment] NEWLINE[newline] {
+			$$ = $1;
+			list_append(&$comment->list, &$newline->list);
+		};
 
 lines:
 	lines line {
@@ -269,9 +282,9 @@ file:
 %%
 
 static struct symbol *
-getsymbol(const char *name)
+_getsymbol(struct document_tree *document, const char *name)
 {
-	struct symbol *h = symbols, *p = NULL;
+	struct symbol *h = document->symbols, *p = NULL;
 
 	while (h != NULL) {
 		if (!strcmp(h->name, name)) {
@@ -294,13 +307,19 @@ getsymbol(const char *name)
 	if (h->name == NULL)
 		abort();
 
-	h->section = section;
+	h->section = document->section;
 link:
-	if (h != symbols)
-		h->next = symbols;
-	symbols = h;
+	if (h != document->symbols)
+		h->next = document->symbols;
+	document->symbols = h;
 
-	return symbols;
+	return document->symbols;
+}
+
+static struct symbol *
+getsymbol(const char *name)
+{
+	return _getsymbol(document, name);
 }
 
 static struct statement *
@@ -318,7 +337,7 @@ new_statement(token_t *tokens)
 	list_append(&stmt->tokens, &tokens->siblings);
 
 	list_init(&stmt->list);
-	list_append(&statements, &stmt->list);
+	list_append(&document->statements, &stmt->list);
 
 	return stmt;
 }
@@ -331,27 +350,27 @@ setsection(const char *name)
 	s = getsymbol(name);
 	s->section = NULL;
 	s->symbol_type = STT_SECTION;
-	prev_section = section;
-	section = s;
+	document->prev_section = document->section;
+	document->section = s;
 }
 
 static void
 popsection()
 {
-	struct symbol *s = section->next;
+	struct symbol *s = document->section->next;
 
 	while (s && s->symbol_type != STT_SECTION)
 		s = s->next;
-	section = s;
+	document->section = s;
 }
 
 static void
 previoussection()
 {
-	struct symbol *s = section;
+	struct symbol *s = document->section;
 
-	section = getsymbol(prev_section->name);
-	prev_section = s;
+	document->section = getsymbol(document->prev_section->name);
+	document->prev_section = s;
 }
 
 void
@@ -467,6 +486,26 @@ print_list(YYSTYPE l)
 	printf("\n");
 }
 
+struct document_tree *document;
+
+static
+struct document_tree *
+new_document(void)
+{
+	struct document_tree *document;
+
+	document = malloc(sizeof(*document));
+	if (document == NULL)
+		abort();
+
+	list_init(&document->statements);
+	document->section = document->prev_section = document->symbols = NULL;
+
+	document->section = _getsymbol(document, ".text");
+
+	return document;
+}
+
 int main(int argc, char **argv) {
 #if YYDEBUG
   yydebug = 1;
@@ -478,9 +517,8 @@ int main(int argc, char **argv) {
       abort();
     }
   }
-  section = getsymbol(".text");
-  list_init(&statements);
+  document = new_document();
   yyparse();
-  print_statements();
-  print_symbols(symbols);
+  print_statements(document);
+  print_symbols(document->symbols);
 }
