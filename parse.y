@@ -507,18 +507,25 @@ new_document(void)
 }
 
 int main(int argc, char **argv) {
+  int i;
 #if YYDEBUG
   yydebug = 1;
 #endif
-  if (argc == 2) {
+  for (i = 1; i < argc; i++) {
+
+    yylineno = 1;
+
     yyin = fopen(argv[1], "r");
     if (yyin == NULL) {
       perror("fopen");
       abort();
     }
+
+    document = new_document();
+    yyparse();
+    print_statements(document);
+    print_symbols(document->symbols);
+
+    fclose(yyin);
   }
-  document = new_document();
-  yyparse();
-  print_statements(document);
-  print_symbols(document->symbols);
 }
