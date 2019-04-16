@@ -242,14 +242,15 @@ statements:
 			new_statement($statement);
 
 			$$ = $head;
-			list_append(&$head->list, &$semicolon->list);
-			list_append(&$head->list, &$statement->list);
+
+			APPEND(3);
 		}
 	|	statement SEMICOLON[semicolon] {
 			new_statement($statement);
 
 			$$ = $statement;
-			list_append(&$statement->list, &$semicolon->list);
+
+			APPEND(2);
 		}
 	|	statement { $$ = $statement; new_statement($statement); };
 
@@ -257,17 +258,17 @@ line:
 		statements COMMENT[comment] NEWLINE[newline] {
 			$$ = $statements;
 
-			list_append(&$statements->list, &$comment->list);
-			list_append(&$statements->list, &$newline->list);
+			APPEND(3);
 		}
 	|	statements NEWLINE[newline] {
 			$$ = $statements;
 
-			list_append(&$statements->list, &$newline->list);
+			APPEND(2);
 		}
 	|	COMMENT[comment] NEWLINE[newline] {
 			$$ = $1;
-			list_append(&$comment->list, &$newline->list);
+
+			APPEND(2);
 		};
 
 lines:
