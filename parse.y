@@ -117,7 +117,7 @@ directive:
 		APPEND(2);
 		getsymbol(document, $symbol->txt)->weak = $$;
 	}
-      |  DIRECTIVE_SET	TOKEN COMMA TOKEN {
+      |  DIRECTIVE_SET	TOKEN COMMA tokens {
 		APPEND(4);
 	}
 
@@ -144,10 +144,12 @@ directive:
 
       |  DIRECTIVE_TYPE TOKEN[symbol] COMMA TOKEN[type] {
 		struct symbol *s;
+
 		APPEND(4);
+
 		s = getsymbol(document, $symbol->txt);
 		s->type = $$;
-		s->symbol_type = strcmp($type->txt, "@function") == 0 ? STT_FUNC : STT_OBJECT;
+		s->symbol_type = strcmp($type->txt + 1, "function") == 0 ? STT_FUNC : STT_OBJECT;
 	}
       |  DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN[size] {
 		APPEND(4);
@@ -165,7 +167,9 @@ label:
 	|	LLABEL;
 
 specialop:
-		SPECIALOP TOKEN COMMA TOKEN { APPEND(4); }
+		SPECIALOP TOKEN COMMA TOKEN {
+			APPEND(4);
+		}
 	;
 
 directive_or_tokens:

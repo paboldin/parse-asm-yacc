@@ -83,7 +83,7 @@ REST	[ \t]+[^;\n]*
 
 \.(ascii|asciz|string)	ENLIST(DIRECTIVE_STRING)
 
-#[^\n]*		ENLIST(COMMENT)
+^#[^\n]*		ENLIST(COMMENT)
 
 {ALPHA}{ALNUMP}*: { yyleng--; ENLIST(LABEL) }
 
