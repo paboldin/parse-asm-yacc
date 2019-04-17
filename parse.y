@@ -31,7 +31,6 @@ void yyerror(struct document_tree *document, const char *msg)
 		list_append(&yyval->list, &yyvsp[-i]->list);			\
 		list_append(&yyval->siblings, &yyvsp[-i]->siblings);		\
 	}									\
-	/*print_list(yyval);*/							\
 } while (0)
 
 #define APPENDLINK(n) do {								\
@@ -40,7 +39,6 @@ void yyerror(struct document_tree *document, const char *msg)
 	for (i--; i >= 0; i--)	{						\
 		list_append(&yyval->list, &yyvsp[-i]->list);			\
 	}									\
-	/*print_list(yyval);*/							\
 } while (0)
 
 %}
@@ -55,8 +53,6 @@ void yyerror(struct document_tree *document, const char *msg)
 %token DIRECTIVE_FILE DIRECTIVE_LOC_IGNORED DIRECTIVE_CFI_IGNORED
 %token DIRECTIVE_DATA_DEF DIRECTIVE_STRING DIRECTIVE_IDENT
 %token COMMENT STATEMENT
-
-%token SPECIALOP
 
 %start file
 
@@ -166,16 +162,10 @@ label:
 		LABEL
 	|	LLABEL;
 
-specialop:
-		SPECIALOP TOKEN COMMA TOKEN {
-			APPEND(4);
-		}
-	;
-
 directive_or_tokens:
 		directive
 	|	tokens
-	|	specialop;
+	;
 
 labels:
 		labels label { APPEND(2); }

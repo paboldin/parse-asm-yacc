@@ -44,6 +44,7 @@ ALPHA	[A-Za-z_]
 HEX	[0-9A-Fa-f]
 SPACE	[ \t]*
 REST	[ \t]+[^;\n]*
+RESTORNOT	[^;\n]*
 
 %%
 
@@ -55,11 +56,11 @@ REST	[ \t]+[^;\n]*
 ".subsection"	ENLIST(DIRECTIVE_SUBSECTION)
 ".previous"	ENLIST(DIRECTIVE_PREVIOUS)
 
-\.text{REST}	ENLIST(DIRECTIVE_TEXT)
-\.data{REST}	ENLIST(DIRECTIVE_DATA)
-\.bss{REST}	ENLIST(DIRECTIVE_BSS)
+".text"		ENLIST(DIRECTIVE_TEXT)
+".data"		ENLIST(DIRECTIVE_DATA)
+".bss"		ENLIST(DIRECTIVE_BSS)
 
-\.(balign|align|p2align){REST} ENLIST(DIRECTIVE_ALIGN)
+\.(balign|align|p2align){RESTORNOT} ENLIST(DIRECTIVE_ALIGN)
 
 ".type"		ENLIST(DIRECTIVE_TYPE)
 ".comm"		ENLIST(DIRECTIVE_COMM)
@@ -89,10 +90,12 @@ REST	[ \t]+[^;\n]*
 
 ({DIGIT}+|\.{ALPHA}{ALNUM}*): { yyleng--; ENLIST(LLABEL) }
 
-"movq"	ENLIST(SPECIALOP)
+"["	|
+"]"	ENLIST(TOKEN)
 
 \"(\\.|[^\\"])*\"	ENLIST(TOKEN)
-[^ \t\n;,]+	ENLIST(TOKEN)	
+[^ \[\]\t\n;,]+		ENLIST(TOKEN)
+
 
 [ \t]+		{ yyspclen = yyleng; yymore(); }
 
