@@ -523,9 +523,10 @@ int main(int argc, char **argv) {
     }
 
     document = new_document();
-    yyparse();
-    print_statements(document);
-    print_symbols(document->symbols);
+    if (!yyparse()) {
+      print_statements(document);
+      print_symbols(document->symbols);
+    }
 
     fclose(yyin);
   }
