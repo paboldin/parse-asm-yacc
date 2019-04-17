@@ -56,6 +56,8 @@ void yyerror(struct document_tree *document, const char *msg)
 %token DIRECTIVE_DATA_DEF DIRECTIVE_STRING DIRECTIVE_IDENT
 %token COMMENT STATEMENT
 
+%token SPECIALOP
+
 %start file
 
 %parse-param {struct document_tree *document}
@@ -74,14 +76,17 @@ tokens_space:
 tokens:
 		tokens COMMA TOKEN { APPEND(3); }
 	|	tokens TOKEN { APPEND(2); }
-	|	TOKEN;
+	|	TOKEN
+	;
 
 directive_pop_stack:
 		DIRECTIVE_PREVIOUS { previoussection(document); }
-	|	DIRECTIVE_POPSECTION	{ popsection(document); };
+	|	DIRECTIVE_POPSECTION	{ popsection(document); }
+	;
 
 directive_section_args:
-		tokens_comma;
+		tokens_comma
+	;
 
 directive_section:
 		DIRECTIVE_SECTION directive_section_args {
@@ -159,9 +164,14 @@ label:
 		LABEL
 	|	LLABEL;
 
+specialop:
+		SPECIALOP TOKEN COMMA TOKEN { APPEND(4); }
+	;
+
 directive_or_tokens:
 		directive
-	|	tokens;
+	|	tokens
+	|	specialop;
 
 labels:
 		labels label { APPEND(2); }

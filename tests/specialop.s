@@ -1,0 +1,2 @@
+	foobar:
+	movq	%rsp,%rbp

@@ -89,6 +89,8 @@ REST	[ \t]+[^;\n]*
 
 ({DIGIT}+|\.{ALPHA}{ALNUM}*): { yyleng--; ENLIST(LLABEL) }
 
+"movq"	ENLIST(SPECIALOP)
+
 \"(\\.|[^\\"])*\"	ENLIST(TOKEN)
 [^ \t\n;,]+	ENLIST(TOKEN)	
 
