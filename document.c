@@ -8,6 +8,8 @@
 #include "document.h"
 #include "parse.h"
 
+#include "y.tab.h"
+
 struct symbol *getsymbol(document_t *document, const char *name)
 {
 	struct symbol *h = document->symbols, *p = NULL;
@@ -105,3 +107,66 @@ new_document(void)
 
 	return document;
 }
+
+void print_statements(document_t *tree)
+{
+	struct statement *stmt;
+
+	list_for_each_entry(struct statement, stmt, &tree->statements, list) {
+		print_siblings(&stmt->tokens, NULL);
+	}
+}
+
+void print_symbol(struct symbol *s)
+{
+	printf("symbol: name = %s, type = %d\n", s->name, s->symbol_type);
+	if (s->section)
+		printf("symbol: section = %s\n", s->section->name);
+	print_tokens(s->label, "symbol: label = ");
+	print_tokens(s->type, "symbol: type = ");
+	print_tokens(s->globl_or_local, "symbol: globl_or_local = ");
+	print_tokens(s->weak, "symbol: weak = ");
+	print_tokens(s->hidden, "symbol: hidden = ");
+	print_tokens(s->protected, "symbol: protected = ");
+	print_tokens(s->internal, "symbol: internal = ");
+	print_tokens(s->size, "symbol: size = ");
+}
+
+void print_symbols(document_t *document)
+{
+	struct symbol *h = document->symbols;
+	while (h) {
+		print_symbol(h);
+		h = h->next;
+	}
+}
+
+void print_dbgfilter(document_t *document)
+{
+	struct statement * statement = list_entry(&document->statements, struct statement, list);
+	token_t *l = list_entry(&statement->tokens, token_t, list), *h = l;
+	int newline = 1, dbgsection = 0;
+
+	do {
+		if (h->type == DIRECTIVE_SECTION ||
+		    h->type == DIRECTIVE_PUSHSECTION) {
+			/* FIXME(pboldin) account for POPSECTION */
+			dbgsection = !strncmp(
+				token_next(h)->txt,
+				".debug", 6);
+		}
+		if (newline && h->type != DIRECTIVE_IDENT &&
+		    (h->type == DIRECTIVE_CFI_IGNORED ||
+		     h->type == DIRECTIVE_LOC_IGNORED ||
+		     dbgsection)) {
+			printf("# ");
+		}
+		if (h->type == LABEL || h->type == LLABEL)
+			printf("%s:", h->buf);
+		else
+			printf("%s", h->buf);
+		newline = h->type == NEWLINE;
+		h = token_next(h);
+	} while (h != l);
+}
+

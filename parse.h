@@ -6,6 +6,8 @@
 
 #include "list.h"
 
+static const char *const yytname[];
+
 #define YYSTYPE_IS_DECLARED	1
 
 typedef struct token {
@@ -42,5 +44,31 @@ printlist(token_t *head)
         for (pos = list_entry((head)->next, typeof_pos, member); \
              &pos->member != (head); \
              pos = list_entry(pos->member.next, typeof_pos, member))
+
+static inline void
+_print_list(YYSTYPE l)
+{
+	YYSTYPE h = l;
+
+	if (h == NULL)
+		return;
+
+	do {
+		printf("(%s)%s", yytname[h->type - 255], h->buf);
+		h = token_next(h);
+	} while (h != l);
+}
+
+static inline void
+print_list(YYSTYPE l)
+{
+	printf("print_list: ");
+	_print_list(l);
+	printf("\n");
+}
+
+
+void print_tokens(token_t *t, const char *prefix);
+void print_siblings(list_t *list, const char *prefix);
 
 #endif /* PARSE_H_INCLUDED */

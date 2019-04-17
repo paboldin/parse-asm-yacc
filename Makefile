@@ -22,4 +22,4 @@ lex.yy.c: parse.l
 	flex $^
 
 clean:
-	rm -f y.tab.c y.tab.h lex.yy.c parser
+	rm -f y.tab.c y.tab.h lex.yy.c parser document.o

@@ -43,11 +43,14 @@ void popsection(document_t *);
 
 struct symbol * getsymbol(document_t *, const char *name);
 
-void print_list(YYSTYPE l);
-void print_siblings(list_t *list, const char *prefix);
-void print_dbgfilter(token_t *l);
+void print_dbgfilter(document_t *document);
+
+void print_symbol(struct symbol *s);
+void print_symbols(document_t *document);
 
 struct statement *new_statement(document_t *, token_t *tokens);
 struct document_tree *new_document(void);
+
+void print_statements(document_t *tree);
 
 #endif /* DOCUMENT_H_INCLUDED */

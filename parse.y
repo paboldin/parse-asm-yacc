@@ -14,8 +14,6 @@
 #include "parse.h"
 #include "document.h"
 
-static const char *const yytname[];
-
 extern FILE* yyin;
 
 int yylex(void);
@@ -36,29 +34,6 @@ void yyerror(struct document_tree *document, const char *msg)
 	/*print_list(yyval);*/							\
 } while (0)
 
-
-void
-print_statements(struct document_tree *tree)
-{
-	struct statement *stmt;
-
-	list_for_each_entry(struct statement, stmt, &tree->statements, list) {
-		print_siblings(&stmt->tokens, NULL);
-	}
-}
-
-static struct statement *
-find_statement(token_t *tkn)
-{
-	token_t *sbl = tkn, *nxt = tkn;
-
-	do {
-		sbl = sibling_next(sbl);
-		nxt = token_next(nxt);
-	} while (sbl == nxt);
-
-	return list_entry(&sbl->siblings, struct statement, tokens);
-}
 
 %}
 
@@ -231,123 +206,9 @@ lines:
      |  line;
 
 file:
-    lines { print_dbgfilter($$); }
+    lines;
 
 %%
-
-
-void
-print_siblings(list_t *list, const char *prefix)
-{
-	token_t *token;
-
-	if (list->next == list)
-		return;
-
-	list_for_each_entry(token_t, token, list, siblings) {
-		if (prefix != NULL) {
-			printf("%s(l%d)", prefix, token->lineno);
-			prefix = NULL;
-		}
-		printf("(%s)%s", yytname[token->type - 255], token->buf);
-	}
-	printf("\n");
-}
-
-void
-print_tokens(token_t *t, const char *prefix)
-{
-	token_t *nsbl = t, *ntkn = t;
-	if (t == NULL)
-		return;
-
-	if (prefix != NULL)
-		printf("%s(l%d)", prefix, t->lineno);
-
-	do {
-		printf("(%s)%s", yytname[ntkn->type - 255], ntkn->buf);
-
-		nsbl = sibling_next(nsbl);
-		ntkn = token_next(ntkn);
-	} while (nsbl == ntkn);
-	printf("\n");
-}
-
-void
-print_symbol(struct symbol *s)
-{
-	printf("symbol: name = %s, type = %d\n", s->name, s->symbol_type);
-	if (s->section)
-		printf("symbol: section = %s\n", s->section->name);
-	print_tokens(s->label, "symbol: label = ");
-	print_tokens(s->type, "symbol: type = ");
-	print_tokens(s->globl_or_local, "symbol: globl_or_local = ");
-	print_tokens(s->weak, "symbol: weak = ");
-	print_tokens(s->hidden, "symbol: hidden = ");
-	print_tokens(s->protected, "symbol: protected = ");
-	print_tokens(s->internal, "symbol: internal = ");
-	print_tokens(s->size, "symbol: size = ");
-}
-
-void
-print_symbols(struct symbol *h)
-{
-	while (h) {
-		print_symbol(h);
-		h = h->next;
-	}
-}
-
-void
-print_dbgfilter(token_t *l)
-{
-	token_t *h = l;
-	int newline = 1, dbgsection = 0;
-
-	do {
-		if (h->type == DIRECTIVE_SECTION ||
-		    h->type == DIRECTIVE_PUSHSECTION) {
-			/* FIXME(pboldin) account for POPSECTION */
-			dbgsection = !strncmp(
-				token_next(h)->txt,
-				".debug", 6);
-		}
-		if (newline && h->type != DIRECTIVE_IDENT &&
-		    (h->type == DIRECTIVE_CFI_IGNORED ||
-		     h->type == DIRECTIVE_LOC_IGNORED ||
-		     dbgsection)) {
-			printf("# ");
-		}
-		if (h->type == LABEL || h->type == LLABEL)
-			printf("%s:", h->buf);
-		else
-			printf("%s", h->buf);
-		newline = h->type == NEWLINE;
-		h = token_next(h);
-	} while (h != l);
-}
-
-void
-_print_list(YYSTYPE l)
-{
-	YYSTYPE h = l;
-
-	if (h == NULL)
-		return;
-
-	do {
-		printf("(%s)%s", yytname[h->type - 255], h->buf);
-		h = token_next(h);
-	} while (h != l);
-}
-
-void
-print_list(YYSTYPE l)
-{
-	printf("print_list: ");
-	_print_list(l);
-	printf("\n");
-}
 
 int main(int argc, char **argv) {
   int i;
@@ -368,9 +229,46 @@ int main(int argc, char **argv) {
     document = new_document();
     if (!yyparse(document)) {
       print_statements(document);
-      print_symbols(document->symbols);
+      print_symbols(document);
+      print_dbgfilter(document);
     }
 
     fclose(yyin);
   }
 }
+
+void print_siblings(list_t *list, const char *prefix)
+{
+       token_t *token;
+
+       if (list->next == list)
+               return;
+
+       list_for_each_entry(token_t, token, list, siblings) {
+               if (prefix != NULL) {
+                       printf("%s(l%d)", prefix, token->lineno);
+                       prefix = NULL;
+               }
+               printf("(%s)%s", yytname[token->type - 255], token->buf);
+       }
+       printf("\n");
+}
+
+void print_tokens(token_t *t, const char *prefix)
+{
+       token_t *nsbl = t, *ntkn = t;
+       if (t == NULL)
+               return;
+
+       if (prefix != NULL)
+               printf("%s(l%d)", prefix, t->lineno);
+
+       do {
+               printf("(%s)%s", yytname[ntkn->type - 255], ntkn->buf);
+
+               nsbl = sibling_next(nsbl);
+               ntkn = token_next(ntkn);
+       } while (nsbl == ntkn);
+       printf("\n");
+}
+
