@@ -1,0 +1,7 @@
+*.o
+y.dot
+y.output
+y.tab.[cho]
+lex.yy.c
+parser
+tags
