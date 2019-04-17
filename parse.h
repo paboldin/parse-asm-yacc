@@ -17,6 +17,9 @@ typedef struct token {
 	/* list of all tokens of the particular statement or directive */
 	list_t siblings;
 
+	/* list of all first tokens of statements */
+	list_t statements;
+
 	int type;
 	int spclength;
 	int lineno;

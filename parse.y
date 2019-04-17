@@ -177,12 +177,13 @@ semicolons:
 	|	semicolons SEMICOLON { APPEND(2); };
 
 statements:
-		statements semicolons statement {
-			new_statement(document, $statement);
+		statements[head] semicolons statement {
+			link_statement($head, $statement);
 
 			APPENDLINK(3);
 		}
-	|	statement { $$ = $statement; new_statement(document, $statement); };
+	|	statement { $$ = $statement; }
+	;
 
 comment_or_newline:
 		COMMENT
@@ -198,16 +199,21 @@ semicolons_or_comment_or_newline:
 line:
 		statements semicolons_or_comment_or_newline {
 			APPENDLINK(2);
-		};
+			list_append(&document->statements, &$statements->statements);
+		}
+	|	semicolons_or_comment_or_newline
+	;
 
 lines:
-	lines line {
-		$$ = $1;
-		list_append(&$1->list, &$2->list); }
-     |  line;
+		lines line {
+			APPENDLINK(2);
+		}
+	|	line
+	;
 
 file:
-    lines { print_dbgfilter($$); };
+		lines { list_append(&document->tokens, &$lines->list); }
+	;
 
 %%
 
@@ -231,6 +237,7 @@ int main(int argc, char **argv) {
     if (!yyparse(document)) {
       print_statements(document);
       print_symbols(document);
+      print_dbgfilter(document);
     }
 
     fclose(yyin);

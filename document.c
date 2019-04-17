@@ -44,23 +44,9 @@ link:
 	return document->symbols;
 }
 
-struct statement *new_statement(document_t *document, token_t *tokens)
+void link_statement(token_t *left, token_t *right)
 {
-	struct statement *stmt;
-
-	stmt = malloc(sizeof(*stmt));
-	if (stmt == NULL)
-		abort();
-
-	stmt->type = tokens->type;
-
-	list_init(&stmt->tokens);
-	list_append(&stmt->tokens, &tokens->siblings);
-
-	list_init(&stmt->list);
-	list_append(&document->statements, &stmt->list);
-
-	return stmt;
+	list_append(&left->statements, &right->statements);
 }
 
 void setsection(document_t *document, const char *name)
@@ -101,6 +87,7 @@ new_document(void)
 		abort();
 
 	list_init(&document->statements);
+	list_init(&document->tokens);
 	document->section = document->prev_section = document->symbols = NULL;
 
 	document->section = getsymbol(document, ".text");
@@ -110,10 +97,10 @@ new_document(void)
 
 void print_statements(document_t *tree)
 {
-	struct statement *stmt;
+	token_t *token;
 
-	list_for_each_entry(struct statement, stmt, &tree->statements, list) {
-		print_siblings(&stmt->tokens, NULL);
+	list_for_each_entry(token_t, token, &tree->statements, statements) {
+		print_tokens(token, NULL);
 	}
 }
 
@@ -141,9 +128,9 @@ void print_symbols(document_t *document)
 	}
 }
 
-void print_dbgfilter(token_t *l)
+void print_dbgfilter(document_t *document)
 {
-	token_t *h = l;
+	token_t *l = list_entry(document->statements.next, token_t, statements), *h = l;
 	int newline = 1, dbgsection = 0;
 
 	do {

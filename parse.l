@@ -26,6 +26,7 @@ YYSTYPE new_token(const char *text, int l, int sl, int type)
 	t->type = type;
 	list_init(&t->list);
 	list_init(&t->siblings);
+	list_init(&t->statements);
 
 	strncpy(t->buf, text, l);
 	t->txt = t->buf + sl;
