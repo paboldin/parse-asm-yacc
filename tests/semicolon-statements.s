@@ -1,1 +1,2 @@
-	.ascii	"test;me"; .ascii "or me"; .ascii	"hello there"
+	.ascii	"test;me";;; .ascii "or me"; .ascii	"hello there"
+	somecode;

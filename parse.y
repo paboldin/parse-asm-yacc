@@ -172,37 +172,31 @@ statement:
 	|	labels directive_or_tokens { APPEND(2); }
 	|	labels;
 
+semicolons:
+		SEMICOLON
+	|	semicolons SEMICOLON { APPEND(2); };
+
 statements:
-		statements[head] SEMICOLON[semicolon] statement {
-			new_statement(document, $head);
-
-			$$ = $head;
-
-			APPENDLINK(3);
-		}
-	|	statement SEMICOLON[semicolon] {
+		statements semicolons statement {
 			new_statement(document, $statement);
 
-			$$ = $statement;
-
-			APPENDLINK(2);
+			APPENDLINK(3);
 		}
 	|	statement { $$ = $statement; new_statement(document, $statement); };
 
+comment_or_newline:
+		COMMENT
+	|	NEWLINE
+	|	COMMENT NEWLINE { APPEND(2); }
+	;
+
+semicolons_or_comment_or_newline:
+		semicolons comment_or_newline { APPEND(2); }
+	|	comment_or_newline
+	;
+
 line:
-		statements COMMENT[comment] NEWLINE[newline] {
-			$$ = $statements;
-
-			APPENDLINK(3);
-		}
-	|	statements NEWLINE[newline] {
-			$$ = $statements;
-
-			APPENDLINK(2);
-		}
-	|	COMMENT[comment] NEWLINE[newline] {
-			$$ = $1;
-
+		statements semicolons_or_comment_or_newline {
 			APPENDLINK(2);
 		};
 
