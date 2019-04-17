@@ -3,12 +3,15 @@
 ifeq ($(NDEBUG),)
 CFLAGS := -DYYDEBUG=1
 endif
-CFLAGS += -DYYERROR_VERBOSE=1
+CFLAGS += -DYYERROR_VERBOSE=1 -g
 
 all: parser
 
-test: all
-	echo "	abc: def, foo; ghj" | ./parser
+tests: all
+	@for f in $$(find tests -iname \*.s); do \
+		echo running $$f; \
+		./parser $$f; \
+	done
 
 parser: y.tab.o y.tab.h lex.yy.o document.o
 	gcc -g -o $@ $^ -lfl -ly $(CFLAGS)
