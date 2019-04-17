@@ -10,14 +10,16 @@ all: parser
 test: all
 	echo "	abc: def, foo; ghj" | ./parser
 
-parser: y.tab.c y.tab.h lex.yy.c
-	gcc -g -o $@ y.tab.c lex.yy.c -lfl -ly $(CFLAGS)
+parser: y.tab.o y.tab.h lex.yy.o document.o
+	gcc -g -o $@ $^ -lfl -ly $(CFLAGS)
 
-y.tab.c y.tab.h: parse.y
+document.o: document.h
+
+y.tab.c y.tab.h: parse.y parse.h
 	yacc --verbose -d $^
 
 lex.yy.c: parse.l
 	flex $^
 
 clean:
-	rm -f y.tab.c y.tab.h lex.yy.c
+	rm -f y.tab.c y.tab.h lex.yy.c parser
