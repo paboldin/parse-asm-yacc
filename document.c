@@ -8,9 +8,7 @@
 #include "document.h"
 #include "parse.h"
 
-extern struct document_tree *document;
-
-struct symbol *_getsymbol(struct document_tree *document, const char *name)
+struct symbol *getsymbol(document_t *document, const char *name)
 {
 	struct symbol *h = document->symbols, *p = NULL;
 
@@ -44,12 +42,7 @@ link:
 	return document->symbols;
 }
 
-struct symbol *getsymbol(const char *name)
-{
-	return _getsymbol(document, name);
-}
-
-struct statement *new_statement(token_t *tokens)
+struct statement *new_statement(document_t *document, token_t *tokens)
 {
 	struct statement *stmt;
 
@@ -68,18 +61,18 @@ struct statement *new_statement(token_t *tokens)
 	return stmt;
 }
 
-void setsection(const char *name)
+void setsection(document_t *document, const char *name)
 {
 	struct symbol *s;
 
-	s = getsymbol(name);
+	s = getsymbol(document, name);
 	s->section = NULL;
 	s->symbol_type = STT_SECTION;
 	document->prev_section = document->section;
 	document->section = s;
 }
 
-void popsection()
+void popsection(document_t *document)
 {
 	struct symbol *s = document->section->next;
 
@@ -88,18 +81,18 @@ void popsection()
 	document->section = s;
 }
 
-void previoussection()
+void previoussection(document_t *document)
 {
 	struct symbol *s = document->section;
 
-	document->section = getsymbol(document->prev_section->name);
+	document->section = getsymbol(document, document->prev_section->name);
 	document->prev_section = s;
 }
 
-struct document_tree *
+document_t *
 new_document(void)
 {
-	struct document_tree *document;
+	document_t *document;
 
 	document = malloc(sizeof(*document));
 	if (document == NULL)
@@ -108,7 +101,7 @@ new_document(void)
 	list_init(&document->statements);
 	document->section = document->prev_section = document->symbols = NULL;
 
-	document->section = _getsymbol(document, ".text");
+	document->section = getsymbol(document, ".text");
 
 	return document;
 }

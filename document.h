@@ -35,17 +35,19 @@ struct document_tree {
 	struct symbol *symbols;
 };
 
-void setsection(const char *name);
-void previoussection(void);
-void popsection(void);
+typedef struct document_tree document_t;
 
-struct symbol * getsymbol(const char *name);
+void setsection(document_t *, const char *name);
+void previoussection(document_t *);
+void popsection(document_t *);
+
+struct symbol * getsymbol(document_t *, const char *name);
 
 void print_list(YYSTYPE l);
 void print_siblings(list_t *list, const char *prefix);
 void print_dbgfilter(token_t *l);
 
-struct statement *new_statement(token_t *tokens);
+struct statement *new_statement(document_t *, token_t *tokens);
 struct document_tree *new_document(void);
 
 #endif /* DOCUMENT_H_INCLUDED */

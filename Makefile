@@ -16,7 +16,7 @@ parser: y.tab.o y.tab.h lex.yy.o document.o
 document.o: document.h
 
 y.tab.c y.tab.h: parse.y parse.h
-	yacc --verbose -d $^
+	yacc --verbose -d $<
 
 lex.yy.c: parse.l
 	flex $^

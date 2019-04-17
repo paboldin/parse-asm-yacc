@@ -1,3 +1,8 @@
+%code requires {
+#include "list.h"
+#include "parse.h"
+#include "document.h"
+}
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,6 +10,7 @@
 
 #include <elf.h>
 
+#include "list.h"
 #include "parse.h"
 #include "document.h"
 
@@ -15,7 +21,7 @@ extern FILE* yyin;
 int yylex(void);
 
 extern int yylineno;
-void yyerror(const char *msg)
+void yyerror(struct document_tree *document, const char *msg)
 {
 	fprintf(stderr, "l%d: %s\n", yylineno, msg);
 }
@@ -30,8 +36,6 @@ void yyerror(const char *msg)
 	/*print_list(yyval);*/							\
 } while (0)
 
-
-extern struct document_tree *document;
 
 void
 print_statements(struct document_tree *tree)
@@ -72,6 +76,8 @@ find_statement(token_t *tkn)
 
 %start file
 
+%parse-param {struct document_tree *document}
+
 %%
 
 
@@ -89,8 +95,8 @@ tokens:
 	|	TOKEN;
 
 directive_pop_stack:
-		DIRECTIVE_PREVIOUS { previoussection(); }
-	|	DIRECTIVE_POPSECTION	{ popsection(); };
+		DIRECTIVE_PREVIOUS { previoussection(document); }
+	|	DIRECTIVE_POPSECTION	{ popsection(document); };
 
 directive_section_args:
 		tokens_comma;
@@ -98,14 +104,14 @@ directive_section_args:
 directive_section:
 		DIRECTIVE_SECTION directive_section_args {
 			APPEND(2);
-			setsection($directive_section_args->txt);
+			setsection(document, $directive_section_args->txt);
 		}
-	|	DIRECTIVE_TEXT { setsection(".text"); }
-	|	DIRECTIVE_DATA { setsection(".data"); }
-	|	DIRECTIVE_BSS  { setsection(".bss"); }
+	|	DIRECTIVE_TEXT { setsection(document, ".text"); }
+	|	DIRECTIVE_DATA { setsection(document, ".data"); }
+	|	DIRECTIVE_BSS  { setsection(document, ".bss"); }
 	|	DIRECTIVE_PUSHSECTION directive_section_args {
 			APPEND(2);
-			setsection($directive_section_args->txt);
+			setsection(document, $directive_section_args->txt);
 		}
 	|	DIRECTIVE_SUBSECTION TOKEN {
 			APPEND(2);
@@ -122,7 +128,7 @@ directive:
       |  DIRECTIVE_ALIGN
       |  DIRECTIVE_WEAK	TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($symbol->txt)->weak = $$;
+		getsymbol(document, $symbol->txt)->weak = $$;
 	}
       |  DIRECTIVE_SET	TOKEN COMMA TOKEN {
 		APPEND(4);
@@ -130,35 +136,35 @@ directive:
 
       |  DIRECTIVE_GLOBL TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($symbol->txt)->globl_or_local = $$;
+		getsymbol(document, $symbol->txt)->globl_or_local = $$;
 	}
       |  DIRECTIVE_LOCAL TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($symbol->txt)->globl_or_local = $$;
+		getsymbol(document, $symbol->txt)->globl_or_local = $$;
 	}
       |  DIRECTIVE_HIDDEN TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($symbol->txt)->hidden = $$;
+		getsymbol(document, $symbol->txt)->hidden = $$;
 	}
       |  DIRECTIVE_PROTECTED TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($symbol->txt)->protected = $$;
+		getsymbol(document, $symbol->txt)->protected = $$;
 	}
       |  DIRECTIVE_INTERNAL TOKEN[symbol] {
 		APPEND(2);
-		getsymbol($symbol->txt)->internal = $$;
+		getsymbol(document, $symbol->txt)->internal = $$;
 	}
 
       |  DIRECTIVE_TYPE TOKEN[symbol] COMMA TOKEN[type] {
 		struct symbol *s;
 		APPEND(4);
-		s = getsymbol($symbol->txt);
+		s = getsymbol(document, $symbol->txt);
 		s->type = $$;
 		s->symbol_type = strcmp($type->txt, "@function") == 0 ? STT_FUNC : STT_OBJECT;
 	}
       |  DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN[size] {
 		APPEND(4);
-		getsymbol($symbol->txt)->size = $size;
+		getsymbol(document, $symbol->txt)->size = $size;
 	}
       |  DIRECTIVE_DATA_DEF
       |  DIRECTIVE_CFI_IGNORED
@@ -186,20 +192,20 @@ statement:
 
 statements:
 		statements[head] SEMICOLON[semicolon] statement {
-			new_statement($statement);
+			new_statement(document, $statement);
 
 			$$ = $head;
 
 			APPEND(3);
 		}
 	|	statement SEMICOLON[semicolon] {
-			new_statement($statement);
+			new_statement(document, $statement);
 
 			$$ = $statement;
 
 			APPEND(2);
 		}
-	|	statement { $$ = $statement; new_statement($statement); };
+	|	statement { $$ = $statement; new_statement(document, $statement); };
 
 line:
 		statements COMMENT[comment] NEWLINE[newline] {
@@ -343,14 +349,13 @@ print_list(YYSTYPE l)
 	printf("\n");
 }
 
-struct document_tree *document;
-
 int main(int argc, char **argv) {
   int i;
 #if YYDEBUG
   yydebug = 1;
 #endif
   for (i = 1; i < argc; i++) {
+    struct document_tree *document;
 
     yylineno = 1;
 
@@ -361,7 +366,7 @@ int main(int argc, char **argv) {
     }
 
     document = new_document();
-    if (!yyparse()) {
+    if (!yyparse(document)) {
       print_statements(document);
       print_symbols(document->symbols);
     }
