@@ -34,10 +34,17 @@ void yyerror(struct document_tree *document, const char *msg)
 	/*print_list(yyval);*/							\
 } while (0)
 
+#define APPENDLINK(n) do {								\
+	int i = n - 1;								\
+	yyval = yyvsp[-i];							\
+	for (i--; i >= 0; i--)	{						\
+		list_append(&yyval->list, &yyvsp[-i]->list);			\
+	}									\
+	/*print_list(yyval);*/							\
+} while (0)
 
 %}
 
-%expect 1
 %token LABEL LLABEL TOKEN SPACE NEWLINE SEMICOLON COMMA
 
 %token DIRECTIVE_SECTION DIRECTIVE_PUSHSECTION DIRECTIVE_POPSECTION DIRECTIVE_SUBSECTION DIRECTIVE_PREVIOUS
@@ -167,18 +174,18 @@ statement:
 
 statements:
 		statements[head] SEMICOLON[semicolon] statement {
-			new_statement(document, $statement);
+			new_statement(document, $head);
 
 			$$ = $head;
 
-			APPEND(3);
+			APPENDLINK(3);
 		}
 	|	statement SEMICOLON[semicolon] {
 			new_statement(document, $statement);
 
 			$$ = $statement;
 
-			APPEND(2);
+			APPENDLINK(2);
 		}
 	|	statement { $$ = $statement; new_statement(document, $statement); };
 
@@ -186,17 +193,17 @@ line:
 		statements COMMENT[comment] NEWLINE[newline] {
 			$$ = $statements;
 
-			APPEND(3);
+			APPENDLINK(3);
 		}
 	|	statements NEWLINE[newline] {
 			$$ = $statements;
 
-			APPEND(2);
+			APPENDLINK(2);
 		}
 	|	COMMENT[comment] NEWLINE[newline] {
 			$$ = $1;
 
-			APPEND(2);
+			APPENDLINK(2);
 		};
 
 lines:
@@ -206,7 +213,7 @@ lines:
      |  line;
 
 file:
-    lines;
+    lines { print_dbgfilter($$); };
 
 %%
 
@@ -230,7 +237,6 @@ int main(int argc, char **argv) {
     if (!yyparse(document)) {
       print_statements(document);
       print_symbols(document);
-      print_dbgfilter(document);
     }
 
     fclose(yyin);

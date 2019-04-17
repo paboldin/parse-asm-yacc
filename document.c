@@ -141,10 +141,9 @@ void print_symbols(document_t *document)
 	}
 }
 
-void print_dbgfilter(document_t *document)
+void print_dbgfilter(token_t *l)
 {
-	struct statement * statement = list_entry(&document->statements, struct statement, list);
-	token_t *l = list_entry(&statement->tokens, token_t, list), *h = l;
+	token_t *h = l;
 	int newline = 1, dbgsection = 0;
 
 	do {
