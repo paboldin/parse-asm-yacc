@@ -8,8 +8,6 @@
 
 static const char *const yytname[];
 
-#define YYSTYPE_IS_DECLARED	1
-
 typedef struct token {
 	/* list of all tokens */
 	list_t list;
@@ -17,17 +15,12 @@ typedef struct token {
 	/* list of all tokens of the particular statement or directive */
 	list_t siblings;
 
-	/* list of all first tokens of statements */
-	list_t statements;
-
 	int type;
 	int spclength;
 	int lineno;
 	char *txt;
 	char buf[];
 } token_t;
-
-typedef token_t *YYSTYPE;
 
 static inline void
 printlist(token_t *head)
@@ -44,9 +37,9 @@ printlist(token_t *head)
 #define sibling_next(tkn) list_entry(tkn->siblings.next, token_t, siblings)
 
 static inline void
-_print_list(YYSTYPE l)
+_print_list(token_t *l)
 {
-	YYSTYPE h = l;
+	token_t *h = l;
 
 	if (h == NULL)
 		return;
@@ -58,7 +51,7 @@ _print_list(YYSTYPE l)
 }
 
 static inline void
-print_list(YYSTYPE l)
+print_list(token_t *l)
 {
 	printf("print_list: ");
 	_print_list(l);

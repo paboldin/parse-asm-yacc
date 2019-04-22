@@ -19,61 +19,65 @@ extern FILE* yyin;
 int yylex(void);
 
 extern int yylineno;
-void yyerror(struct document_tree *document, const char *msg)
+void yyerror(document_t *document, const char *msg)
 {
 	fprintf(stderr, "l%d: %s\n", yylineno, msg);
 }
 
-#define APPEND(n) do {								\
+#define JOINTOKENS(n) do {							\
 	int i = n - 1;								\
-	yyval = yyvsp[-i];							\
+	yyval.token = yyvsp[-i].token;						\
 	for (i--; i >= 0; i--)	{						\
-		list_append(&yyval->list, &yyvsp[-i]->list);			\
-		list_append(&yyval->siblings, &yyvsp[-i]->siblings);		\
-	}									\
-} while (0)
-
-#define APPENDLINK(n) do {								\
-	int i = n - 1;								\
-	yyval = yyvsp[-i];							\
-	for (i--; i >= 0; i--)	{						\
-		list_append(&yyval->list, &yyvsp[-i]->list);			\
+		list_append(&yyval.token->siblings, &yyvsp[-i].token->siblings);\
 	}									\
 } while (0)
 
 %}
 
-%token LABEL LLABEL TOKEN SPACE NEWLINE SEMICOLON COMMA
+%union {
+	token_t *token;
+	statement_t *statement;
+}
 
-%token DIRECTIVE_SECTION DIRECTIVE_PUSHSECTION DIRECTIVE_POPSECTION DIRECTIVE_SUBSECTION DIRECTIVE_PREVIOUS
-%token DIRECTIVE_TEXT DIRECTIVE_DATA DIRECTIVE_BSS
+%token <token> LABEL LLABEL TOKEN SPACE NEWLINE SEMICOLON COMMA
 
-%token DIRECTIVE_ALIGN DIRECTIVE_TYPE DIRECTIVE_COMM DIRECTIVE_WEAK DIRECTIVE_SIZE
-%token DIRECTIVE_GLOBL DIRECTIVE_LOCAL DIRECTIVE_HIDDEN DIRECTIVE_PROTECTED DIRECTIVE_INTERNAL DIRECTIVE_SET
-%token DIRECTIVE_FILE DIRECTIVE_LOC_IGNORED DIRECTIVE_CFI_IGNORED
-%token DIRECTIVE_DATA_DEF DIRECTIVE_STRING DIRECTIVE_IDENT
-%token COMMENT STATEMENT
+%token <token> DIRECTIVE_SECTION DIRECTIVE_PUSHSECTION DIRECTIVE_POPSECTION
+%token <token> DIRECTIVE_SUBSECTION DIRECTIVE_PREVIOUS DIRECTIVE_TEXT DIRECTIVE_DATA
+%token <token> DIRECTIVE_BSS DIRECTIVE_ALIGN DIRECTIVE_TYPE DIRECTIVE_COMM
+%token <token> DIRECTIVE_WEAK DIRECTIVE_SIZE DIRECTIVE_GLOBL DIRECTIVE_LOCAL
+%token <token> DIRECTIVE_HIDDEN DIRECTIVE_PROTECTED DIRECTIVE_INTERNAL DIRECTIVE_SET
+%token <token> DIRECTIVE_FILE DIRECTIVE_LOC_IGNORED DIRECTIVE_CFI_IGNORED
+%token <token> DIRECTIVE_DATA_DEF DIRECTIVE_STRING DIRECTIVE_IDENT
+
+%token <token> COMMENT
+
+%type <token> tokens_comma tokens_space tokens directive_pop_stack 
+%type <token> directive_section directive directive_or_tokens
+%type <token> statement_tokens labels label semicolons_or_comment_or_newline
+%type <token> comment_or_newline
+
+%type <statement> statement statements line lines file aux_directive
 
 %start file
 
-%parse-param {struct document_tree *document}
+%parse-param {document_t *document}
 
 %%
 
 
 tokens_comma:
-		tokens_comma COMMA TOKEN { APPEND(3); }
+		tokens_comma COMMA TOKEN { JOINTOKENS(3); }
 	|	TOKEN
 	;
 
 tokens_space:
-		tokens_space TOKEN { APPEND(2); }
+		tokens_space TOKEN { JOINTOKENS(2); }
 	|	TOKEN
 	;
 
 tokens:
-		tokens COMMA TOKEN { APPEND(3); }
-	|	tokens TOKEN { APPEND(2); }
+		tokens COMMA TOKEN { JOINTOKENS(3); }
+	|	tokens TOKEN { JOINTOKENS(2); }
 	|	TOKEN
 	;
 
@@ -82,86 +86,90 @@ directive_pop_stack:
 	|	DIRECTIVE_POPSECTION	{ POPSECTION($$); }
 	;
 
-directive_section_args:
-		tokens_comma
-	;
-
 directive_section:
-		DIRECTIVE_SECTION directive_section_args {
-			APPEND(2);
-			SETSECTION($directive_section_args->txt, $$);
+		DIRECTIVE_SECTION tokens_comma[args] {
+			JOINTOKENS(2);
+			SETSECTION($args->txt, $$);
 		}
 	|	DIRECTIVE_TEXT { SETSECTION(".text", $$); }
 	|	DIRECTIVE_DATA { SETSECTION(".data", $$); }
 	|	DIRECTIVE_BSS  { SETSECTION(".bss", $$); }
-	|	DIRECTIVE_PUSHSECTION directive_section_args {
-			APPEND(2);
-			SETSECTION($directive_section_args->txt, $$);
+	|	DIRECTIVE_PUSHSECTION tokens_comma[args] {
+			JOINTOKENS(2);
+			SETSECTION($args->txt, $$);
 		}
 	|	DIRECTIVE_SUBSECTION TOKEN {
-			APPEND(2);
+			JOINTOKENS(2);
 		}
 	|	directive_pop_stack
 	;
 
 directive:
-		DIRECTIVE_FILE tokens_space { APPEND(2); }
+		DIRECTIVE_FILE tokens_space { JOINTOKENS(2); }
 
 
 	|	directive_section
-	|	DIRECTIVE_COMM tokens_comma { APPEND(2); }
+	|	DIRECTIVE_COMM tokens_comma { JOINTOKENS(2); }
 
 	|	DIRECTIVE_ALIGN
-	|	DIRECTIVE_WEAK	TOKEN[symbol] {
-			APPEND(2);
-			setsymbolweak(document, $symbol->txt, $$);
-		}
 	|	DIRECTIVE_SET	TOKEN COMMA tokens {
-			APPEND(4);
+			JOINTOKENS(4);
 		}
 
-	|	DIRECTIVE_GLOBL TOKEN[symbol] {
-			APPEND(2);
-			setsymbolglobl_or_local(document, $symbol->txt, $$);
-		}
-	|	DIRECTIVE_LOCAL TOKEN[symbol] {
-			APPEND(2);
-			setsymbolglobl_or_local(document, $symbol->txt, $$);
-		}
-	|	DIRECTIVE_HIDDEN TOKEN[symbol] {
-			APPEND(2);
-			setsymbolhidden(document, $symbol->txt, $$);
-		}
-	|	DIRECTIVE_PROTECTED TOKEN[symbol] {
-			APPEND(2);
-			setsymbolprotected(document, $symbol->txt, $$);
-		}
-	|	DIRECTIVE_INTERNAL TOKEN[symbol] {
-			APPEND(2);
-			setsymbolinternal(document, $symbol->txt, $$);
-		}
-
-	|	DIRECTIVE_TYPE[directive] TOKEN[symbol] COMMA TOKEN[type] {
-			APPEND(4);
-
-			setsymboltype(document, $symbol->txt, $$, $type);
-		}
-	|	DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN {
-			APPEND(4);
-
-			setsymbolsize(document, $symbol->txt, $$);
-		}
 	|	DIRECTIVE_DATA_DEF
 	|	DIRECTIVE_CFI_IGNORED
 	|	DIRECTIVE_LOC_IGNORED
-	|	DIRECTIVE_STRING TOKEN { APPEND(2); }
-	|	DIRECTIVE_IDENT TOKEN { APPEND(2); }
+	|	DIRECTIVE_STRING TOKEN { JOINTOKENS(2); }
+	|	DIRECTIVE_IDENT TOKEN { JOINTOKENS(2); }
+	;
+
+aux_directive:
+		DIRECTIVE_WEAK	TOKEN[symbol] {
+			JOINTOKENS(2);
+			$$ = statement_new(document, $1);
+			setsymbolweak(document, $symbol->txt, $$);
+		}
+	|	DIRECTIVE_GLOBL TOKEN[symbol] {
+			JOINTOKENS(2);
+			$$ = statement_new(document, $1);
+			setsymbolglobl_or_local(document, $symbol->txt, $$);
+		}
+	|	DIRECTIVE_LOCAL TOKEN[symbol] {
+			JOINTOKENS(2);
+			$$ = statement_new(document, $1);
+			setsymbolglobl_or_local(document, $symbol->txt, $$);
+		}
+	|	DIRECTIVE_HIDDEN TOKEN[symbol] {
+			JOINTOKENS(2);
+			$$ = statement_new(document, $1);
+			setsymbolhidden(document, $symbol->txt, $$);
+		}
+	|	DIRECTIVE_PROTECTED TOKEN[symbol] {
+			JOINTOKENS(2);
+			$$ = statement_new(document, $1);
+			setsymbolprotected(document, $symbol->txt, $$);
+		}
+	|	DIRECTIVE_INTERNAL TOKEN[symbol] {
+			JOINTOKENS(2);
+			$$ = statement_new(document, $1);
+			setsymbolinternal(document, $symbol->txt, $$);
+		}
+	|	DIRECTIVE_TYPE[directive] TOKEN[symbol] COMMA TOKEN[type] {
+			JOINTOKENS(4);
+			$$ = statement_new(document, $1);
+			setsymboltype(document, $symbol->txt, $$, $type);
+		}
+	|	DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN {
+			JOINTOKENS(4);
+			$$ = statement_new(document, $1);
+			setsymbolsize(document, $symbol->txt, $$);
+		}
 	;
 
 
 label:
-		LABEL { SET_CURRENT_LABEL($1); }
-	|	LLABEL { SET_CURRENT_LOCAL_LABEL($1); }
+		LABEL
+	|	LLABEL
 	;
 
 directive_or_tokens:
@@ -170,26 +178,33 @@ directive_or_tokens:
 	;
 
 labels:
-		labels label { APPEND(2); }
+		labels label { JOINTOKENS(2); }
 	|	label
 	;
 
-statement:
+statement_tokens:
 		directive_or_tokens
-	|	labels directive_or_tokens { APPEND(2); }
+	|	labels directive_or_tokens { JOINTOKENS(2); }
 	|	labels
+	;
+
+statement:
+		statement_tokens {
+			$$ = statement_new(document, $statement_tokens);
+		}
+	|	aux_directive
 	;
 
 semicolons:
 		SEMICOLON
-	|	semicolons SEMICOLON { APPEND(2); }
+	|	semicolons SEMICOLON { JOINTOKENS(2); }
 	;
 
 statements:
 		statements[head] semicolons statement {
-			link_statement($head, $statement);
+			list_append(&$head->list, &$statement->list);
 
-			APPENDLINK(3);
+			//JOINTOKENSLINK(3);
 		}
 	|	statement { $$ = $statement; }
 	;
@@ -197,32 +212,32 @@ statements:
 comment_or_newline:
 		COMMENT
 	|	NEWLINE
-	|	COMMENT NEWLINE { APPEND(2); }
+	|	COMMENT NEWLINE { JOINTOKENS(2); }
 	;
 
 semicolons_or_comment_or_newline:
-		semicolons comment_or_newline { APPEND(2); }
+		semicolons comment_or_newline { JOINTOKENS(2); }
 	|	comment_or_newline
 	;
 
 line:
 		statements semicolons_or_comment_or_newline {
-			APPENDLINK(2);
-			list_append(&document->statements, &$statements->statements);
+			//JOINTOKENSLINK(2);
+			//list_append(&document->statements, &$statements->statements);
 		}
-	|	semicolons_or_comment_or_newline
+	|	semicolons_or_comment_or_newline {}
 	;
 
 lines:
 		lines line {
-			APPENDLINK(2);
+			//JOINTOKENSLINK(2);
 		}
 	|	line
 	;
 
 file:
 		lines {
-			list_append(&document->tokens, &$lines->list);
+			//list_append(&document->tokens, &$lines->list);
 
 			SETSECTION(NULL, NULL);
 		}
@@ -236,7 +251,7 @@ int main(int argc, char **argv) {
   yydebug = 1;
 #endif
   for (i = 1; i < argc; i++) {
-    struct document_tree *document;
+    document_t *document;
 
     yylineno = 1;
 

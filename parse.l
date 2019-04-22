@@ -7,7 +7,7 @@
 #include "y.tab.h"
 
 #define ENLIST(tkn) {							\
-	yylval = new_token(yytext, yyleng, yyspclen, tkn);		\
+	yylval.token = new_token(yytext, yyleng, yyspclen, tkn);	\
 	yyspclen = 0;							\
 	return tkn;							\
 }
@@ -15,9 +15,9 @@
 static int yyspclen;
 
 /* TODO(pboldin): Reuse yystate for that, do need for ->type */
-YYSTYPE new_token(const char *text, int l, int sl, int type)
+token_t *new_token(const char *text, int l, int sl, int type)
 {
-	YYSTYPE t;
+	token_t *t;
 	
 	t = malloc(sizeof(*t) + l + sl + 1);
 	if (t == NULL) abort();
@@ -26,7 +26,6 @@ YYSTYPE new_token(const char *text, int l, int sl, int type)
 	t->type = type;
 	list_init(&t->list);
 	list_init(&t->siblings);
-	list_init(&t->statements);
 
 	strncpy(t->buf, text, l);
 	t->txt = t->buf + sl;
