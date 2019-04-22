@@ -53,49 +53,92 @@ link:
 	return document->symbols;
 }
 
-struct symbol *
+void
 setsymboltype(document_t *document, const char *name,
 	      token_t *first_token, token_t *type)
 {
 	struct symbol *s;
 
 	s = getsymbol(document, name);
-	s->statements.type = first_token;
-	s->symbol_type = strcmp(type->txt + 1, "function") == 0 ? STT_FUNC : STT_OBJECT;
+	s->aux.type = first_token;
+	s->type = strcmp(type->txt + 1, "function") == 0 ? STT_FUNC : STT_OBJECT;
+	setsymboltoken(s, first_token);
 }
-
 
 void link_statement(token_t *left, token_t *right)
 {
 	list_append(&left->statements, &right->statements);
 }
 
-void setsection(document_t *document, const char *name)
+static inline
+void _reset_labels(document_t *document)
+{
+	document->current_label = NULL;
+}
+
+static inline
+int is_data_section(struct symbol *section)
+{
+	return strstr(section->name, "data") != NULL;
+}
+
+static inline
+void reset_labels(document_t *document, token_t *token)
+{
+	struct symbol *s = document->symbols;
+
+	if (s && s->type != STT_SECTION && is_data_section(document->section)) {
+		setsymboltoken(s, token);
+		s->type = STT_OBJECT;
+	}
+
+	_reset_labels(document);
+}
+
+struct symbol *newsection(document_t *document, const char *name)
 {
 	struct symbol *s;
 
 	s = getsymbol(document, name);
 	s->section = NULL;
-	s->symbol_type = STT_SECTION;
+	s->type = STT_SECTION;
+
+	return s;
+}
+
+void setsection(document_t *document, const char *name, token_t *token)
+{
+	struct symbol *s;
+
+	reset_labels(document, token);
+
+	if (!name)
+		return;
+
+	s = newsection(document, name);
 	document->prev_section = document->section;
 	document->section = s;
 }
 
-void popsection(document_t *document)
+void popsection(document_t *document, token_t *token)
 {
 	struct symbol *s = document->section->next;
 
-	while (s && s->symbol_type != STT_SECTION)
+	while (s && s->type != STT_SECTION)
 		s = s->next;
 	document->section = s;
+
+	reset_labels(document, token);
 }
 
-void previoussection(document_t *document)
+void previoussection(document_t *document, token_t *token)
 {
 	struct symbol *s = document->section;
 
 	document->section = getsymbol(document, document->prev_section->name);
 	document->prev_section = s;
+
+	reset_labels(document, token);
 }
 
 document_t *
@@ -111,9 +154,34 @@ document_new(void)
 	list_init(&document->tokens);
 	document->section = document->prev_section = document->symbols = NULL;
 
-	document->section = getsymbol(document, ".text");
+	_reset_labels(document);
+
+	document->section = newsection(document, ".text");
 
 	return document;
+}
+
+static inline
+int STREQ(const char *a, const char *b)
+{
+	return !strcmp(a, b);
+}
+
+static inline
+int STRNEQ(const char *a, const char *b)
+{
+	return !STREQ(a, b);
+}
+
+void document_set_current_label(document_t *document, token_t *label)
+{
+	struct symbol *s;
+
+	reset_labels(document, label);
+
+	setsymbollabel(document, label->txt, label);
+
+	document->current_label = label;
 }
 
 void print_statements(document_t *tree)
@@ -125,19 +193,38 @@ void print_statements(document_t *tree)
 	}
 }
 
+const char *symtype2str(int type)
+{
+	switch (type) {
+	case STT_SECTION:
+		return "section";
+	case STT_FUNC:
+		return "function";
+	case STT_OBJECT:
+		return "object";
+	default:
+		return "unknown";
+	}
+}
+
 void print_symbol(struct symbol *s)
 {
-	printf("symbol: name = %s, type = %d\n", s->name, s->symbol_type);
+	printf("symbol: name = %s, type = %s\n", s->name, symtype2str(s->type));
+#if 0
+	printf("symbol: first = %d, last = %d\n",
+	       s->statements.first ? s->statements.first->lineno : -1,
+	       s->statements.last ? s->statements.last->lineno : -1);
+#endif
 	if (s->section)
 		printf("symbol: section = %s\n", s->section->name);
-	print_tokens(s->statements.label, "symbol: label = ");
-	print_tokens(s->statements.type, "symbol: type = ");
-	print_tokens(s->statements.globl_or_local, "symbol: globl_or_local = ");
-	print_tokens(s->statements.weak, "symbol: weak = ");
-	print_tokens(s->statements.hidden, "symbol: hidden = ");
-	print_tokens(s->statements.protected, "symbol: protected = ");
-	print_tokens(s->statements.internal, "symbol: internal = ");
-	print_tokens(s->statements.size, "symbol: size = ");
+	print_tokens(s->aux.label, "symbol: label = ");
+	print_tokens(s->aux.type, "symbol: type = ");
+	print_tokens(s->aux.globl_or_local, "symbol: globl_or_local = ");
+	print_tokens(s->aux.weak, "symbol: weak = ");
+	print_tokens(s->aux.hidden, "symbol: hidden = ");
+	print_tokens(s->aux.protected, "symbol: protected = ");
+	print_tokens(s->aux.internal, "symbol: internal = ");
+	print_tokens(s->aux.size, "symbol: size = ");
 }
 
 void print_symbols(document_t *document)

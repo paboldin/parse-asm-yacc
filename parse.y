@@ -78,8 +78,8 @@ tokens:
 	;
 
 directive_pop_stack:
-		DIRECTIVE_PREVIOUS { previoussection(document); }
-	|	DIRECTIVE_POPSECTION	{ popsection(document); }
+		DIRECTIVE_PREVIOUS { PREVIOUSSECTION($$); }
+	|	DIRECTIVE_POPSECTION	{ POPSECTION($$); }
 	;
 
 directive_section_args:
@@ -89,14 +89,14 @@ directive_section_args:
 directive_section:
 		DIRECTIVE_SECTION directive_section_args {
 			APPEND(2);
-			setsection(document, $directive_section_args->txt);
+			SETSECTION($directive_section_args->txt, $$);
 		}
-	|	DIRECTIVE_TEXT { setsection(document, ".text"); }
-	|	DIRECTIVE_DATA { setsection(document, ".data"); }
-	|	DIRECTIVE_BSS  { setsection(document, ".bss"); }
+	|	DIRECTIVE_TEXT { SETSECTION(".text", $$); }
+	|	DIRECTIVE_DATA { SETSECTION(".data", $$); }
+	|	DIRECTIVE_BSS  { SETSECTION(".bss", $$); }
 	|	DIRECTIVE_PUSHSECTION directive_section_args {
 			APPEND(2);
-			setsection(document, $directive_section_args->txt);
+			SETSECTION($directive_section_args->txt, $$);
 		}
 	|	DIRECTIVE_SUBSECTION TOKEN {
 			APPEND(2);
@@ -114,7 +114,7 @@ directive:
 	|	DIRECTIVE_ALIGN
 	|	DIRECTIVE_WEAK	TOKEN[symbol] {
 			APPEND(2);
-			getsymbol(document, $symbol->txt)->statements.weak = $$;
+			setsymbolweak(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_SET	TOKEN COMMA tokens {
 			APPEND(4);
@@ -122,23 +122,23 @@ directive:
 
 	|	DIRECTIVE_GLOBL TOKEN[symbol] {
 			APPEND(2);
-			getsymbol(document, $symbol->txt)->statements.globl_or_local = $$;
+			setsymbolglobl_or_local(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_LOCAL TOKEN[symbol] {
 			APPEND(2);
-			getsymbol(document, $symbol->txt)->statements.globl_or_local = $$;
+			setsymbolglobl_or_local(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_HIDDEN TOKEN[symbol] {
 			APPEND(2);
-			getsymbol(document, $symbol->txt)->statements.hidden = $$;
+			setsymbolhidden(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_PROTECTED TOKEN[symbol] {
 			APPEND(2);
-			getsymbol(document, $symbol->txt)->statements.protected = $$;
+			setsymbolprotected(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_INTERNAL TOKEN[symbol] {
 			APPEND(2);
-			getsymbol(document, $symbol->txt)->statements.internal = $$;
+			setsymbolinternal(document, $symbol->txt, $$);
 		}
 
 	|	DIRECTIVE_TYPE[directive] TOKEN[symbol] COMMA TOKEN[type] {
@@ -146,9 +146,10 @@ directive:
 
 			setsymboltype(document, $symbol->txt, $$, $type);
 		}
-	|	DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN[size] {
+	|	DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN {
 			APPEND(4);
-			getsymbol(document, $symbol->txt)->statements.size = $size;
+
+			setsymbolsize(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_DATA_DEF
 	|	DIRECTIVE_CFI_IGNORED
@@ -220,7 +221,11 @@ lines:
 	;
 
 file:
-		lines { list_append(&document->tokens, &$lines->list); }
+		lines {
+			list_append(&document->tokens, &$lines->list);
+
+			SETSECTION(NULL, NULL);
+		}
 	;
 
 %%

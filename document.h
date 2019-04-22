@@ -9,7 +9,7 @@ typedef token_t *YYSTYPE;
 
 struct symbol {
 	const char *name;
-	int symbol_type;
+	int type;
 
 	struct {
 		YYSTYPE type;
@@ -17,7 +17,9 @@ struct symbol {
 		YYSTYPE globl_or_local;
 		YYSTYPE weak, hidden, protected, internal;
 		YYSTYPE size;
-	} statements;
+
+		YYSTYPE first, last;
+	} aux;
 
 	struct symbol *section;
 	struct symbol *next;
@@ -40,14 +42,47 @@ struct document_tree {
 
 typedef struct document_tree document_t;
 
-void setsection(document_t *, const char *name);
-void previoussection(document_t *);
-void popsection(document_t *);
+void setsection(document_t *, const char *, token_t *);
+void previoussection(document_t *, token_t *);
+void popsection(document_t *, token_t *);
+
+#define SETSECTION(name, token)	setsection(document, (name), (token))
+#define PREVIOUSSECTION(token)	previoussection(document, (token))
+#define POPSECTION(token)	popsection(document, (token))
 
 struct symbol * getsymbol(document_t *, const char *name);
 
-struct symbol * setsymboltype(document_t *, const char *name,
+void setsymboltype(document_t *, const char *name,
 			      token_t *first_token, token_t *type);
+
+static inline
+void setsymboltoken(struct symbol *s, token_t *token)
+{
+	if (token == NULL)
+		return;
+	if (s->aux.first == NULL)
+		s->aux.first = token;
+	s->aux.last = token;
+}
+
+#define GENERATE_SET_STATEMENT(statement_name)			\
+static void inline						\
+setsymbol ## statement_name (document_t *document,		\
+			     const char *name, token_t *token)	\
+{								\
+	struct symbol *s = getsymbol(document, name);		\
+	setsymboltoken(s, token);				\
+	s->aux.statement_name = token;			\
+}
+
+GENERATE_SET_STATEMENT(label);
+GENERATE_SET_STATEMENT(globl_or_local);
+GENERATE_SET_STATEMENT(weak);
+GENERATE_SET_STATEMENT(hidden);
+GENERATE_SET_STATEMENT(protected);
+GENERATE_SET_STATEMENT(internal);
+GENERATE_SET_STATEMENT(size);
+
 
 void print_dbgfilter(document_t *document);
 
@@ -57,21 +92,10 @@ void print_symbols(document_t *document);
 void link_statement(token_t *left, token_t *right);
 struct document_tree *document_new(void);
 
-static inline
-void document_set_current_label(document_t *document, token_t *label)
-{
-	document->current_label = label;
-}
-
-static inline
-void document_set_current_local_label(document_t *document,
-				      token_t *local_label)
-{
-	document->current_local_label = local_label;
-}
-
+void document_set_current_label(document_t *document, token_t *label);
 #define SET_CURRENT_LABEL(label) document_set_current_label(document, (label))
-#define SET_CURRENT_LOCAL_LABEL(label) document_set_current_local_label(document, (label))
+
+#define SET_CURRENT_LOCAL_LABEL(label) do { } while (0)
 
 void print_statements(document_t *tree);
 
