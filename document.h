@@ -29,6 +29,8 @@ struct document_tree {
 
 	struct symbol *section, *prev_section;
 
+	token_t *current_label, *current_local_label;
+
 	/* LRU with symbols */
 	struct symbol *symbols;
 };
@@ -47,7 +49,23 @@ void print_symbol(struct symbol *s);
 void print_symbols(document_t *document);
 
 void link_statement(token_t *left, token_t *right);
-struct document_tree *new_document(void);
+struct document_tree *document_new(void);
+
+static inline
+void document_set_current_label(document_t *document, token_t *label)
+{
+	document->current_label = label;
+}
+
+static inline
+void document_set_current_local_label(document_t *document,
+				      token_t *local_label)
+{
+	document->current_local_label = local_label;
+}
+
+#define SET_CURRENT_LABEL(label) document_set_current_label(document, (label))
+#define SET_CURRENT_LOCAL_LABEL(label) document_set_current_local_label(document, (label))
 
 void print_statements(document_t *tree);
 

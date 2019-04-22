@@ -78,7 +78,7 @@ void previoussection(document_t *document)
 }
 
 document_t *
-new_document(void)
+document_new(void)
 {
 	document_t *document;
 

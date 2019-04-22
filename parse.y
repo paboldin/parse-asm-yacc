@@ -159,8 +159,9 @@ directive:
 
 
 label:
-		LABEL
-	|	LLABEL;
+		LABEL { SET_CURRENT_LABEL($1); }
+	|	LLABEL { SET_CURRENT_LOCAL_LABEL($1); }
+	;
 
 directive_or_tokens:
 		directive
@@ -237,7 +238,7 @@ int main(int argc, char **argv) {
       abort();
     }
 
-    document = new_document();
+    document = document_new();
     if (!yyparse(document)) {
       print_statements(document);
       print_symbols(document);
@@ -282,4 +283,3 @@ void print_tokens(token_t *t, const char *prefix)
        } while (nsbl == ntkn);
        printf("\n");
 }
-
