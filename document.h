@@ -34,7 +34,7 @@ struct document_tree {
 
 	struct symbol *section, *prev_section;
 
-	token_t *current_label, *current_local_label;
+	token_t *current_label;
 
 	/* LRU with symbols */
 	struct symbol *symbols;
