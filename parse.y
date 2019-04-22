@@ -63,11 +63,13 @@ void yyerror(struct document_tree *document, const char *msg)
 
 tokens_comma:
 		tokens_comma COMMA TOKEN { APPEND(3); }
-	|	TOKEN;
+	|	TOKEN
+	;
 
 tokens_space:
 		tokens_space TOKEN { APPEND(2); }
-	|	TOKEN;
+	|	TOKEN
+	;
 
 tokens:
 		tokens COMMA TOKEN { APPEND(3); }
@@ -99,60 +101,61 @@ directive_section:
 	|	DIRECTIVE_SUBSECTION TOKEN {
 			APPEND(2);
 		}
-	|	directive_pop_stack;
+	|	directive_pop_stack
+	;
 
 directive:
-         DIRECTIVE_FILE tokens_space { APPEND(2); }
+		DIRECTIVE_FILE tokens_space { APPEND(2); }
 
 
-      |  directive_section
-      |  DIRECTIVE_COMM tokens_comma { APPEND(2); }
+	|	directive_section
+	|	DIRECTIVE_COMM tokens_comma { APPEND(2); }
 
-      |  DIRECTIVE_ALIGN
-      |  DIRECTIVE_WEAK	TOKEN[symbol] {
-		APPEND(2);
-		getsymbol(document, $symbol->txt)->statements.weak = $$;
-	}
-      |  DIRECTIVE_SET	TOKEN COMMA tokens {
-		APPEND(4);
-	}
+	|	DIRECTIVE_ALIGN
+	|	DIRECTIVE_WEAK	TOKEN[symbol] {
+			APPEND(2);
+			getsymbol(document, $symbol->txt)->statements.weak = $$;
+		}
+	|	DIRECTIVE_SET	TOKEN COMMA tokens {
+			APPEND(4);
+		}
 
-      |  DIRECTIVE_GLOBL TOKEN[symbol] {
-		APPEND(2);
-		getsymbol(document, $symbol->txt)->statements.globl_or_local = $$;
-	}
-      |  DIRECTIVE_LOCAL TOKEN[symbol] {
-		APPEND(2);
-		getsymbol(document, $symbol->txt)->statements.globl_or_local = $$;
-	}
-      |  DIRECTIVE_HIDDEN TOKEN[symbol] {
-		APPEND(2);
-		getsymbol(document, $symbol->txt)->statements.hidden = $$;
-	}
-      |  DIRECTIVE_PROTECTED TOKEN[symbol] {
-		APPEND(2);
-		getsymbol(document, $symbol->txt)->statements.protected = $$;
-	}
-      |  DIRECTIVE_INTERNAL TOKEN[symbol] {
-		APPEND(2);
-		getsymbol(document, $symbol->txt)->statements.internal = $$;
-	}
+	|	DIRECTIVE_GLOBL TOKEN[symbol] {
+			APPEND(2);
+			getsymbol(document, $symbol->txt)->statements.globl_or_local = $$;
+		}
+	|	DIRECTIVE_LOCAL TOKEN[symbol] {
+			APPEND(2);
+			getsymbol(document, $symbol->txt)->statements.globl_or_local = $$;
+		}
+	|	DIRECTIVE_HIDDEN TOKEN[symbol] {
+			APPEND(2);
+			getsymbol(document, $symbol->txt)->statements.hidden = $$;
+		}
+	|	DIRECTIVE_PROTECTED TOKEN[symbol] {
+			APPEND(2);
+			getsymbol(document, $symbol->txt)->statements.protected = $$;
+		}
+	|	DIRECTIVE_INTERNAL TOKEN[symbol] {
+			APPEND(2);
+			getsymbol(document, $symbol->txt)->statements.internal = $$;
+		}
 
-      |  DIRECTIVE_TYPE[directive] TOKEN[symbol] COMMA TOKEN[type] {
+	|	DIRECTIVE_TYPE[directive] TOKEN[symbol] COMMA TOKEN[type] {
+			APPEND(4);
 
-		APPEND(4);
-
-		setsymboltype(document, $symbol->txt, $$, $type);
-	}
-      |  DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN[size] {
-		APPEND(4);
-		getsymbol(document, $symbol->txt)->statements.size = $size;
-	}
-      |  DIRECTIVE_DATA_DEF
-      |  DIRECTIVE_CFI_IGNORED
-      |  DIRECTIVE_LOC_IGNORED
-      |  DIRECTIVE_STRING TOKEN { APPEND(2); }
-      |  DIRECTIVE_IDENT TOKEN { APPEND(2); };
+			setsymboltype(document, $symbol->txt, $$, $type);
+		}
+	|	DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN[size] {
+			APPEND(4);
+			getsymbol(document, $symbol->txt)->statements.size = $size;
+		}
+	|	DIRECTIVE_DATA_DEF
+	|	DIRECTIVE_CFI_IGNORED
+	|	DIRECTIVE_LOC_IGNORED
+	|	DIRECTIVE_STRING TOKEN { APPEND(2); }
+	|	DIRECTIVE_IDENT TOKEN { APPEND(2); }
+	;
 
 
 label:
@@ -167,16 +170,19 @@ directive_or_tokens:
 
 labels:
 		labels label { APPEND(2); }
-	|	label;
+	|	label
+	;
 
 statement:
 		directive_or_tokens
 	|	labels directive_or_tokens { APPEND(2); }
-	|	labels;
+	|	labels
+	;
 
 semicolons:
 		SEMICOLON
-	|	semicolons SEMICOLON { APPEND(2); };
+	|	semicolons SEMICOLON { APPEND(2); }
+	;
 
 statements:
 		statements[head] semicolons statement {
