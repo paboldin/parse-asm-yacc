@@ -151,29 +151,29 @@ void print_symbols(document_t *document)
 
 void print_dbgfilter(document_t *document)
 {
-	token_t *l = list_entry(document->statements.next, token_t, statements), *h = l;
+	token_t *token;
 	int newline = 1, dbgsection = 0;
 
-	do {
-		if (h->type == DIRECTIVE_SECTION ||
-		    h->type == DIRECTIVE_PUSHSECTION) {
+	list_for_each_entry(token, &document->tokens, list) {
+		if (token->type == DIRECTIVE_SECTION ||
+		    token->type == DIRECTIVE_PUSHSECTION) {
 			/* FIXME(pboldin) account for POPSECTION */
 			dbgsection = !strncmp(
-				token_next(h)->txt,
+				token_next(token)->txt,
 				".debug", 6);
 		}
-		if (newline && h->type != DIRECTIVE_IDENT &&
-		    (h->type == DIRECTIVE_CFI_IGNORED ||
-		     h->type == DIRECTIVE_LOC_IGNORED ||
+		if (newline &&
+		    token->type != DIRECTIVE_IDENT &&
+		    (token->type == DIRECTIVE_CFI_IGNORED ||
+		     token->type == DIRECTIVE_LOC_IGNORED ||
 		     dbgsection)) {
 			printf("# ");
 		}
-		if (h->type == LABEL || h->type == LLABEL)
-			printf("%s:", h->buf);
+		if (token->type == LABEL || token->type == LLABEL)
+			printf("%s:", token->buf);
 		else
-			printf("%s", h->buf);
-		newline = h->type == NEWLINE;
-		h = token_next(h);
-	} while (h != l);
+			printf("%s", token->buf);
+		newline = token->type == NEWLINE;
+	}
 }
 
