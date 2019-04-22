@@ -44,6 +44,18 @@ link:
 	return document->symbols;
 }
 
+struct symbol *
+setsymboltype(document_t *document, const char *name,
+	      token_t *first_token, token_t *type)
+{
+	struct symbol *s;
+
+	s = getsymbol(document, name);
+	s->type = first_token;
+	s->symbol_type = strcmp(type->txt + 1, "function") == 0 ? STT_FUNC : STT_OBJECT;
+}
+
+
 void link_statement(token_t *left, token_t *right)
 {
 	list_append(&left->statements, &right->statements);

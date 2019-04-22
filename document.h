@@ -43,6 +43,9 @@ void popsection(document_t *);
 
 struct symbol * getsymbol(document_t *, const char *name);
 
+struct symbol * setsymboltype(document_t *, const char *name,
+			      token_t *first_token, token_t *type);
+
 void print_dbgfilter(document_t *document);
 
 void print_symbol(struct symbol *s);

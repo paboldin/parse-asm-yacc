@@ -138,14 +138,11 @@ directive:
 		getsymbol(document, $symbol->txt)->internal = $$;
 	}
 
-      |  DIRECTIVE_TYPE TOKEN[symbol] COMMA TOKEN[type] {
-		struct symbol *s;
+      |  DIRECTIVE_TYPE[directive] TOKEN[symbol] COMMA TOKEN[type] {
 
 		APPEND(4);
 
-		s = getsymbol(document, $symbol->txt);
-		s->type = $$;
-		s->symbol_type = strcmp($type->txt + 1, "function") == 0 ? STT_FUNC : STT_OBJECT;
+		setsymboltype(document, $symbol->txt, $$, $type);
 	}
       |  DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN[size] {
 		APPEND(4);
