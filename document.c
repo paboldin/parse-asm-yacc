@@ -10,6 +10,24 @@
 
 #include "y.tab.h"
 
+static
+struct symbol *newsymbol(const char *name)
+{
+	struct symbol *h;
+
+	h = (struct symbol *)malloc(sizeof(*h));
+	if (h == NULL)
+		abort();
+
+	memset((void *)h, 0, sizeof(*h));
+
+	h->name = strdup(name);
+	if (h->name == NULL)
+		abort();
+
+	return h;
+}
+
 struct symbol *getsymbol(document_t *document, const char *name)
 {
 	struct symbol *h = document->symbols, *p = NULL;
@@ -25,16 +43,7 @@ struct symbol *getsymbol(document_t *document, const char *name)
 		h = h->next;
 	}
 
-	h = (struct symbol *)malloc(sizeof(*h));
-	if (h == NULL)
-		abort();
-
-	memset((void *)h, 0, sizeof(*h));
-
-	h->name = strdup(name);
-	if (h->name == NULL)
-		abort();
-
+	h = newsymbol(name);
 	h->section = document->section;
 link:
 	if (h != document->symbols)
