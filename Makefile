@@ -21,6 +21,8 @@ document.o: document.h
 y.tab.c y.tab.h: parse.y parse.h
 	yacc --verbose -d $<
 
+y.tab.o: document.h
+
 lex.yy.c: parse.l
 	flex $^
 
