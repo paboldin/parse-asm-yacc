@@ -90,10 +90,10 @@ RESTORNOT	[^;\n]*
 
 ({DIGIT}+|\.{ALPHA}{ALNUM}*): { yyleng--; ENLIST(LLABEL) }
 
-"["	|
-"]"	ENLIST(TOKEN)
 
-\"(\\.|[^\\"])*\"	ENLIST(TOKEN)
+\"(\\.|[^\\"])*\"	|
+"["			|
+"]"			|
 [^ \[\]\t\n;,]+		ENLIST(TOKEN)
 
 
