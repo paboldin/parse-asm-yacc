@@ -111,7 +111,7 @@ directive:
       |  DIRECTIVE_ALIGN
       |  DIRECTIVE_WEAK	TOKEN[symbol] {
 		APPEND(2);
-		getsymbol(document, $symbol->txt)->weak = $$;
+		getsymbol(document, $symbol->txt)->statements.weak = $$;
 	}
       |  DIRECTIVE_SET	TOKEN COMMA tokens {
 		APPEND(4);
@@ -119,23 +119,23 @@ directive:
 
       |  DIRECTIVE_GLOBL TOKEN[symbol] {
 		APPEND(2);
-		getsymbol(document, $symbol->txt)->globl_or_local = $$;
+		getsymbol(document, $symbol->txt)->statements.globl_or_local = $$;
 	}
       |  DIRECTIVE_LOCAL TOKEN[symbol] {
 		APPEND(2);
-		getsymbol(document, $symbol->txt)->globl_or_local = $$;
+		getsymbol(document, $symbol->txt)->statements.globl_or_local = $$;
 	}
       |  DIRECTIVE_HIDDEN TOKEN[symbol] {
 		APPEND(2);
-		getsymbol(document, $symbol->txt)->hidden = $$;
+		getsymbol(document, $symbol->txt)->statements.hidden = $$;
 	}
       |  DIRECTIVE_PROTECTED TOKEN[symbol] {
 		APPEND(2);
-		getsymbol(document, $symbol->txt)->protected = $$;
+		getsymbol(document, $symbol->txt)->statements.protected = $$;
 	}
       |  DIRECTIVE_INTERNAL TOKEN[symbol] {
 		APPEND(2);
-		getsymbol(document, $symbol->txt)->internal = $$;
+		getsymbol(document, $symbol->txt)->statements.internal = $$;
 	}
 
       |  DIRECTIVE_TYPE[directive] TOKEN[symbol] COMMA TOKEN[type] {
@@ -146,7 +146,7 @@ directive:
 	}
       |  DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN[size] {
 		APPEND(4);
-		getsymbol(document, $symbol->txt)->size = $size;
+		getsymbol(document, $symbol->txt)->statements.size = $size;
 	}
       |  DIRECTIVE_DATA_DEF
       |  DIRECTIVE_CFI_IGNORED

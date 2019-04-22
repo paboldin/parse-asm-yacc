@@ -51,7 +51,7 @@ setsymboltype(document_t *document, const char *name,
 	struct symbol *s;
 
 	s = getsymbol(document, name);
-	s->type = first_token;
+	s->statements.type = first_token;
 	s->symbol_type = strcmp(type->txt + 1, "function") == 0 ? STT_FUNC : STT_OBJECT;
 }
 
@@ -121,14 +121,14 @@ void print_symbol(struct symbol *s)
 	printf("symbol: name = %s, type = %d\n", s->name, s->symbol_type);
 	if (s->section)
 		printf("symbol: section = %s\n", s->section->name);
-	print_tokens(s->label, "symbol: label = ");
-	print_tokens(s->type, "symbol: type = ");
-	print_tokens(s->globl_or_local, "symbol: globl_or_local = ");
-	print_tokens(s->weak, "symbol: weak = ");
-	print_tokens(s->hidden, "symbol: hidden = ");
-	print_tokens(s->protected, "symbol: protected = ");
-	print_tokens(s->internal, "symbol: internal = ");
-	print_tokens(s->size, "symbol: size = ");
+	print_tokens(s->statements.label, "symbol: label = ");
+	print_tokens(s->statements.type, "symbol: type = ");
+	print_tokens(s->statements.globl_or_local, "symbol: globl_or_local = ");
+	print_tokens(s->statements.weak, "symbol: weak = ");
+	print_tokens(s->statements.hidden, "symbol: hidden = ");
+	print_tokens(s->statements.protected, "symbol: protected = ");
+	print_tokens(s->statements.internal, "symbol: internal = ");
+	print_tokens(s->statements.size, "symbol: size = ");
 }
 
 void print_symbols(document_t *document)

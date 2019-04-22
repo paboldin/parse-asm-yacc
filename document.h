@@ -10,11 +10,14 @@ typedef token_t *YYSTYPE;
 struct symbol {
 	const char *name;
 	int symbol_type;
-	YYSTYPE type;
-	YYSTYPE label;
-	YYSTYPE globl_or_local;
-	YYSTYPE weak, hidden, protected, internal;
-	YYSTYPE size;
+
+	struct {
+		YYSTYPE type;
+		YYSTYPE label;
+		YYSTYPE globl_or_local;
+		YYSTYPE weak, hidden, protected, internal;
+		YYSTYPE size;
+	} statements;
 
 	struct symbol *section;
 	struct symbol *next;
