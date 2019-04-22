@@ -259,7 +259,7 @@ void print_siblings(list_t *list, const char *prefix)
        if (list->next == list)
                return;
 
-       list_for_each_entry(token_t, token, list, siblings) {
+       list_for_each_entry(token, list, siblings) {
                if (prefix != NULL) {
                        printf("%s(l%d)", prefix, token->lineno);
                        prefix = NULL;

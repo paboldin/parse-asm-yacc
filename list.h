@@ -41,4 +41,12 @@ list_del(list_t *list)
 	list->next->prev = list->prev;
 }
 
+#define __container_of(ptr, sample, member)                             \
+    (void *)container_of((ptr), typeof(*(sample)), member)
+
+#define list_for_each_entry(pos, head, member)                          \
+    for (pos = __container_of((head)->next, pos, member);               \
+         &pos->member != (head);                                        \
+         pos = __container_of(pos->member.next, pos, member))
+
 #endif /* LIST_H_INCLUDED */

@@ -111,7 +111,7 @@ void print_statements(document_t *tree)
 {
 	token_t *token;
 
-	list_for_each_entry(token_t, token, &tree->statements, statements) {
+	list_for_each_entry(token, &tree->statements, statements) {
 		print_tokens(token, NULL);
 	}
 }

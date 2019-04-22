@@ -43,11 +43,6 @@ printlist(token_t *head)
 #define token_next(tkn) list_entry(tkn->list.next, token_t, list)
 #define sibling_next(tkn) list_entry(tkn->siblings.next, token_t, siblings)
 
-#define list_for_each_entry(typeof_pos, pos, head, member) \
-        for (pos = list_entry((head)->next, typeof_pos, member); \
-             &pos->member != (head); \
-             pos = list_entry(pos->member.next, typeof_pos, member))
-
 static inline void
 _print_list(YYSTYPE l)
 {
