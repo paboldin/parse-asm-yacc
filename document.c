@@ -21,6 +21,7 @@ struct symbol *newsymbol(const char *name)
 
 	memset((void *)h, 0, sizeof(*h));
 
+	list_init(&h->statements);
 	h->name = strdup(name);
 	if (h->name == NULL)
 		abort();
@@ -53,6 +54,16 @@ link:
 	return document->symbols;
 }
 
+struct symbol *setsymbol(document_t *document, const char *name)
+{
+	if (name)
+		document->current_symbol = getsymbol(document, name);
+	else
+		document->current_symbol = NULL;
+
+	return document->current_symbol;
+}
+
 void
 setsymboltype(document_t *document, const char *name,
 	      statement_t *stmt, token_t *type)
@@ -62,30 +73,21 @@ setsymboltype(document_t *document, const char *name,
 	s = getsymbol(document, name);
 	s->aux.type = stmt;
 	s->type = strcmp(type->txt + 1, "function") == 0 ? STT_FUNC : STT_OBJECT;
+	list_append(&s->statements, &stmt->symbol);
+}
+
+void
+setsymbollabel(document_t *document, const char *name, statement_t *stmt)
+{
+	struct symbol *s = setsymbol(document, name);
+	s->aux.label = stmt;
+	list_append(&s->statements, &stmt->symbol);
 }
 
 static inline
-void _reset_labels(document_t *document)
+void reset_symbols(document_t *document)
 {
-	document->current_label = NULL;
-}
-
-static inline
-int is_data_section(struct symbol *section)
-{
-	return strstr(section->name, "data") != NULL;
-}
-
-static inline
-void reset_labels(document_t *document, token_t *token)
-{
-	struct symbol *s = document->symbols;
-
-	if (s && s->type != STT_SECTION && is_data_section(document->section)) {
-		s->type = STT_OBJECT;
-	}
-
-	_reset_labels(document);
+	document->current_symbol = NULL;
 }
 
 struct symbol *newsection(document_t *document, const char *name)
@@ -103,7 +105,7 @@ void setsection(document_t *document, const char *name, token_t *token)
 {
 	struct symbol *s;
 
-	reset_labels(document, token);
+	reset_symbols(document);
 
 	if (!name)
 		return;
@@ -121,7 +123,7 @@ void popsection(document_t *document, token_t *token)
 		s = s->next;
 	document->section = s;
 
-	reset_labels(document, token);
+	reset_symbols(document);
 }
 
 void previoussection(document_t *document, token_t *token)
@@ -131,7 +133,7 @@ void previoussection(document_t *document, token_t *token)
 	document->section = getsymbol(document, document->prev_section->name);
 	document->prev_section = s;
 
-	reset_labels(document, token);
+	reset_symbols(document);
 }
 
 document_t *
@@ -149,7 +151,7 @@ document_new(void)
 
 	document->section = document->prev_section = document->symbols = NULL;
 
-	_reset_labels(document);
+	reset_symbols(document);
 
 	document->section = newsection(document, ".text");
 
@@ -166,16 +168,6 @@ static inline
 int STRNEQ(const char *a, const char *b)
 {
 	return !STREQ(a, b);
-}
-
-void document_set_current_label(document_t *document, token_t *label)
-{
-	struct symbol *s;
-
-	reset_labels(document, label);
-
-	//setsymbollabel(document, label->txt, label);
-	document->current_label = label;
 }
 
 void print_statements(document_t *document)
@@ -214,7 +206,19 @@ statement_t *statement_new(document_t *document, token_t *token, token_t *lookah
 	list_init(&stmt->list);
 	list_append(&document->statements, &stmt->list);
 
+	/* prepare symbol list */
+	list_init(&stmt->symbol);
+
 	return stmt;
+}
+
+void symbol_add_statement(document_t *document, statement_t *stmt)
+{
+	struct symbol *s = document->current_symbol;
+
+	if (s == NULL)
+		return;
+	list_append(&s->statements, &stmt->symbol);
 }
 
 token_t *statement_last_token(statement_t *stmt)
@@ -256,17 +260,24 @@ void print_statement(statement_t *stmt, const char *prefix)
 
 void print_symbol(struct symbol *s)
 {
+	statement_t *stmt;
+
 	printf("symbol: name = %s, type = %s\n", s->name, symtype2str(s->type));
 	if (s->section)
 		printf("symbol: section = %s\n", s->section->name);
 	print_statement(s->aux.label, "symbol: label = ");
 	print_statement(s->aux.type, "symbol: type = ");
 	print_statement(s->aux.globl_or_local, "symbol: globl_or_local = ");
+	print_statement(s->aux.comm, "symbol: comm = ");
 	print_statement(s->aux.weak, "symbol: weak = ");
 	print_statement(s->aux.hidden, "symbol: hidden = ");
 	print_statement(s->aux.protected, "symbol: protected = ");
 	print_statement(s->aux.internal, "symbol: internal = ");
 	print_statement(s->aux.size, "symbol: size = ");
+
+	list_for_each_entry(stmt, &s->statements, symbol) {
+		print_statement(stmt, "");
+	}
 }
 
 void print_symbols(document_t *document)

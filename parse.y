@@ -34,6 +34,8 @@ do {								\
 					yylval.token : NULL);	\
 } while (0)
 
+#define	SYMBOL_ADD_STATEMENT(stmt)	symbol_add_statement(document, (stmt))
+
 %}
 
 %union {
@@ -176,6 +178,7 @@ directive_or_tokens:
 statement_without_label:
 		directive_or_tokens[statement_tokens] {
 			STATEMENT_NEW($1);
+			SYMBOL_ADD_STATEMENT($$);
 		}
 	|	aux_directive
 	;

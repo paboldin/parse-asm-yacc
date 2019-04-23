@@ -50,7 +50,7 @@ typedef struct document {
 
 	struct symbol *section, *prev_section;
 
-	token_t *current_label;
+	struct symbol *current_symbol;
 
 	/* LRU with symbols */
 	struct symbol *symbols;
@@ -65,29 +65,30 @@ void popsection(document_t *, token_t *);
 #define POPSECTION(token)	popsection(document, (token))
 
 struct symbol *getsymbol(document_t *, const char *name);
+struct symbol *setsymbol(document_t *, const char *name);
 
 void setsymboltype(document_t *, const char *name,
 		   statement_t *stmt, token_t *type);
+void setsymbollabel(document_t *document, const char *name, statement_t *stmt);
 
 
-#define GENERATE_SET_STATEMENT(statement_name)				\
+#define GENERATE_SETSYMBOL(statement_name)				\
 static inline void							\
 setsymbol ## statement_name (document_t *document,			\
 			     const char *name, statement_t *stmt)	\
 {									\
 	struct symbol *s = getsymbol(document, name);			\
 	s->aux.statement_name = stmt;					\
+	list_append(&s->statements, &stmt->symbol);			\
 }
 
-GENERATE_SET_STATEMENT(globl_or_local);
-GENERATE_SET_STATEMENT(label);
-GENERATE_SET_STATEMENT(weak);
-GENERATE_SET_STATEMENT(hidden);
-GENERATE_SET_STATEMENT(protected);
-GENERATE_SET_STATEMENT(internal);
-GENERATE_SET_STATEMENT(size);
-GENERATE_SET_STATEMENT(comm);
-
+GENERATE_SETSYMBOL(globl_or_local);
+GENERATE_SETSYMBOL(weak);
+GENERATE_SETSYMBOL(hidden);
+GENERATE_SETSYMBOL(protected);
+GENERATE_SETSYMBOL(internal);
+GENERATE_SETSYMBOL(size);
+GENERATE_SETSYMBOL(comm);
 
 
 void print_dbgfilter(document_t *document);
@@ -98,6 +99,7 @@ void print_symbols(document_t *document);
 document_t *document_new(void);
 
 statement_t *statement_new(document_t *, token_t *, token_t *);
+void symbol_add_statement(document_t *, statement_t *);
 
 token_t *statement_first_token(statement_t *);
 token_t *statement_last_token(statement_t *);
