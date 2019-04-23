@@ -17,10 +17,19 @@ typedef struct list {
 #define list_first_entry(ptr, type, member) \
 	list_entry((ptr)->next, type, member)
 
+#define list_last_entry(ptr, type, member) \
+	list_entry((ptr)->prev, type, member)
+
 static inline void
 list_init(list_t *list)
 {
 	list->next = list->prev = list;
+}
+
+static inline int
+list_empty(list_t *list)
+{
+	return list->next == list;
 }
 
 static inline void

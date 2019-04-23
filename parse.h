@@ -6,7 +6,7 @@
 
 #include "list.h"
 
-static const char *const yytname[];
+extern const char * const *token_name;
 
 typedef struct token {
 	/* list of all tokens */
@@ -34,7 +34,9 @@ printlist(token_t *head)
 }
 
 #define token_next(tkn) list_entry(tkn->list.next, token_t, list)
+#define token_prev(tkn) list_entry(tkn->list.prev, token_t, list)
 #define sibling_next(tkn) list_entry(tkn->siblings.next, token_t, siblings)
+#define sibling_prev(tkn) list_entry(tkn->siblings.prev, token_t, siblings)
 
 static inline void
 _print_list(token_t *l)
@@ -45,7 +47,7 @@ _print_list(token_t *l)
 		return;
 
 	do {
-		printf("(%s)%s", yytname[h->type - 255], h->buf);
+		printf("(%s)%s", token_name[h->type - 255], h->buf);
 		h = token_next(h);
 	} while (h != l);
 }
@@ -61,5 +63,7 @@ print_list(token_t *l)
 
 void print_tokens(token_t *t, const char *prefix);
 void print_siblings(list_t *list, const char *prefix);
+
+#define YY_DECL int yylex(document_t *document)
 
 #endif /* PARSE_H_INCLUDED */

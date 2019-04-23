@@ -145,6 +145,8 @@ document_new(void)
 
 	list_init(&document->statements);
 	list_init(&document->tokens);
+	list_init(&document->statement_tokens);
+
 	document->section = document->prev_section = document->symbols = NULL;
 
 	_reset_labels(document);
@@ -176,29 +178,51 @@ void document_set_current_label(document_t *document, token_t *label)
 	document->current_label = label;
 }
 
-void print_statements(document_t *tree)
+void print_statements(document_t *document)
 {
-#if 0
-	token_t *token;
+	statement_t *stmt;
 
-	list_for_each_entry(token, &tree->statements, statements) {
-		print_tokens(token, NULL);
+	list_for_each_entry(stmt, &document->statements, list) {
+		print_tokens(statement_first_token(stmt), NULL);
 	}
-#endif
 }
 
 statement_t *statement_new(document_t *document, token_t *token)
 {
 	statement_t *stmt;
+	token_t *t;
 
 	stmt = malloc(sizeof(*stmt));
 	if (stmt == NULL)
 		abort();
 
+	/* link tokens */
 	list_init(&stmt->tokens);
+	list_del(&document->statement_tokens);
 	list_append(&stmt->tokens, &token->siblings);
+	list_init(&document->statement_tokens);
+
+	/* link statement */
+	list_init(&stmt->list);
+	list_append(&document->statements, &stmt->list);
 
 	return stmt;
+}
+
+token_t *statement_last_token(statement_t *stmt)
+{
+	if (list_empty(&stmt->tokens))
+		return NULL;
+
+	return list_last_entry(&stmt->tokens, token_t, siblings);
+}
+
+token_t *statement_first_token(statement_t *stmt)
+{
+	if (list_empty(&stmt->tokens))
+		return NULL;
+
+	return list_first_entry(&stmt->tokens, token_t, siblings);
 }
 
 const char *symtype2str(int type)

@@ -14,23 +14,18 @@
 #include "parse.h"
 #include "document.h"
 
+YY_DECL;
+
 extern FILE* yyin;
 
-int yylex(void);
+static const char *const yytname[];
+const char * const *token_name = yytname;
 
 extern int yylineno;
 void yyerror(document_t *document, const char *msg)
 {
 	fprintf(stderr, "l%d: %s\n", yylineno, msg);
 }
-
-#define JOINTOKENS(n) do {							\
-	int i = n - 1;								\
-	yyval.token = yyvsp[-i].token;						\
-	for (i--; i >= 0; i--)	{						\
-		list_append(&yyval.token->siblings, &yyvsp[-i].token->siblings);\
-	}									\
-} while (0)
 
 %}
 
@@ -53,31 +48,33 @@ void yyerror(document_t *document, const char *msg)
 
 %type <token> tokens_comma tokens_space tokens directive_pop_stack 
 %type <token> directive_section directive directive_or_tokens
-%type <token> statement_tokens labels label semicolons_or_comment_or_newline
-%type <token> comment_or_newline
+%type <token> labels_tokens label semicolons_or_comment_or_newline
+%type <token> comment_or_newline semicolons
 
+%type <statement> labels statement_without_label statement_maybe_labels
 %type <statement> statement statements line lines file aux_directive
 
 %start file
 
-%parse-param {document_t *document}
+%param {document_t *document}
 
 %%
 
+/* NOTE(pboldin): always use LEFT RECURSION or things will break up */
 
 tokens_comma:
-		tokens_comma COMMA TOKEN { JOINTOKENS(3); }
+		tokens_comma COMMA TOKEN
 	|	TOKEN
 	;
 
 tokens_space:
-		tokens_space TOKEN { JOINTOKENS(2); }
+		tokens_space TOKEN
 	|	TOKEN
 	;
 
 tokens:
-		tokens COMMA TOKEN { JOINTOKENS(3); }
-	|	tokens TOKEN { JOINTOKENS(2); }
+		tokens COMMA TOKEN
+	|	tokens TOKEN
 	|	TOKEN
 	;
 
@@ -88,81 +85,71 @@ directive_pop_stack:
 
 directive_section:
 		DIRECTIVE_SECTION tokens_comma[args] {
-			JOINTOKENS(2);
 			SETSECTION($args->txt, $$);
 		}
 	|	DIRECTIVE_TEXT { SETSECTION(".text", $$); }
 	|	DIRECTIVE_DATA { SETSECTION(".data", $$); }
 	|	DIRECTIVE_BSS  { SETSECTION(".bss", $$); }
 	|	DIRECTIVE_PUSHSECTION tokens_comma[args] {
-			JOINTOKENS(2);
 			SETSECTION($args->txt, $$);
 		}
 	|	DIRECTIVE_SUBSECTION TOKEN {
-			JOINTOKENS(2);
 		}
 	|	directive_pop_stack
 	;
 
 directive:
-		DIRECTIVE_FILE tokens_space { JOINTOKENS(2); }
+		DIRECTIVE_FILE tokens_space
 
 
 	|	directive_section
-	|	DIRECTIVE_COMM tokens_comma { JOINTOKENS(2); }
 
 	|	DIRECTIVE_ALIGN
-	|	DIRECTIVE_SET	TOKEN COMMA tokens {
-			JOINTOKENS(4);
-		}
+	|	DIRECTIVE_SET	TOKEN COMMA tokens
 
 	|	DIRECTIVE_DATA_DEF
 	|	DIRECTIVE_CFI_IGNORED
 	|	DIRECTIVE_LOC_IGNORED
-	|	DIRECTIVE_STRING TOKEN { JOINTOKENS(2); }
-	|	DIRECTIVE_IDENT TOKEN { JOINTOKENS(2); }
+	|	DIRECTIVE_STRING TOKEN
+	|	DIRECTIVE_IDENT TOKEN
 	;
 
 aux_directive:
 		DIRECTIVE_WEAK	TOKEN[symbol] {
-			JOINTOKENS(2);
 			$$ = statement_new(document, $1);
 			setsymbolweak(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_GLOBL TOKEN[symbol] {
-			JOINTOKENS(2);
 			$$ = statement_new(document, $1);
 			setsymbolglobl_or_local(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_LOCAL TOKEN[symbol] {
-			JOINTOKENS(2);
 			$$ = statement_new(document, $1);
 			setsymbolglobl_or_local(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_HIDDEN TOKEN[symbol] {
-			JOINTOKENS(2);
 			$$ = statement_new(document, $1);
 			setsymbolhidden(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_PROTECTED TOKEN[symbol] {
-			JOINTOKENS(2);
 			$$ = statement_new(document, $1);
 			setsymbolprotected(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_INTERNAL TOKEN[symbol] {
-			JOINTOKENS(2);
 			$$ = statement_new(document, $1);
 			setsymbolinternal(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_TYPE[directive] TOKEN[symbol] COMMA TOKEN[type] {
-			JOINTOKENS(4);
 			$$ = statement_new(document, $1);
 			setsymboltype(document, $symbol->txt, $$, $type);
 		}
 	|	DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN {
-			JOINTOKENS(4);
 			$$ = statement_new(document, $1);
 			setsymbolsize(document, $symbol->txt, $$);
+		}
+	|	DIRECTIVE_COMM TOKEN[symbol] COMMA tokens_comma {
+			$$ = statement_new(document, $1);
+			setsymbolcomm(document, $symbol->txt, $$);
 		}
 	;
 
@@ -177,68 +164,70 @@ directive_or_tokens:
 	|	tokens
 	;
 
-labels:
-		labels label { JOINTOKENS(2); }
-	|	label
-	;
-
-statement_tokens:
-		directive_or_tokens
-	|	labels directive_or_tokens { JOINTOKENS(2); }
-	|	labels
-	;
-
-statement:
-		statement_tokens {
+statement_without_label:
+		directive_or_tokens[statement_tokens] {
 			$$ = statement_new(document, $statement_tokens);
 		}
 	|	aux_directive
 	;
 
-semicolons:
-		SEMICOLON
-	|	semicolons SEMICOLON { JOINTOKENS(2); }
+labels_tokens:
+		labels_tokens label
+	|	label
 	;
 
-statements:
-		statements[head] semicolons statement {
-			list_append(&$head->list, &$statement->list);
-
-			//JOINTOKENSLINK(3);
+labels:
+		labels_tokens {
+			$$ = statement_new(document, $labels_tokens);
+			setsymbollabel(document,
+				statement_last_token($$)->txt,
+				$$);
 		}
-	|	statement { $$ = $statement; }
+	;
+
+statement_maybe_labels:
+		statement_without_label
+	|	labels statement_without_label
+	|	labels
+	;
+
+statement:
+		statement_maybe_labels;
+
+semicolons:
+		SEMICOLON
+	|	semicolons SEMICOLON
+	;
+
+/* Only use LEFT RECURSION HERE, as `statement`s are linked on creation */
+statements:
+		statements[head] semicolons statement
+	|	statement
 	;
 
 comment_or_newline:
 		COMMENT
 	|	NEWLINE
-	|	COMMENT NEWLINE { JOINTOKENS(2); }
+	|	COMMENT NEWLINE
 	;
 
 semicolons_or_comment_or_newline:
-		semicolons comment_or_newline { JOINTOKENS(2); }
+		semicolons comment_or_newline
 	|	comment_or_newline
 	;
 
 line:
-		statements semicolons_or_comment_or_newline {
-			//JOINTOKENSLINK(2);
-			//list_append(&document->statements, &$statements->statements);
-		}
+		statements semicolons_or_comment_or_newline
 	|	semicolons_or_comment_or_newline {}
 	;
 
 lines:
-		lines line {
-			//JOINTOKENSLINK(2);
-		}
+		lines line {}
 	|	line
 	;
 
 file:
 		lines {
-			//list_append(&document->tokens, &$lines->list);
-
 			SETSECTION(NULL, NULL);
 		}
 	;

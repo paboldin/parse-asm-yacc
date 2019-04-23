@@ -29,6 +29,7 @@ struct symbol {
 		statement_t *protected;
 		statement_t *internal;
 		statement_t *size;
+		statement_t *comm;
 	} aux;
 
 	list_t statements;
@@ -43,6 +44,9 @@ typedef struct document {
 
 	/* all tokens */
 	list_t tokens;
+
+	/* tokens for current statement */
+	list_t statement_tokens;
 
 	struct symbol *section, *prev_section;
 
@@ -76,11 +80,13 @@ setsymbol ## statement_name (document_t *document,			\
 }
 
 GENERATE_SET_STATEMENT(globl_or_local);
+GENERATE_SET_STATEMENT(label);
 GENERATE_SET_STATEMENT(weak);
 GENERATE_SET_STATEMENT(hidden);
 GENERATE_SET_STATEMENT(protected);
 GENERATE_SET_STATEMENT(internal);
 GENERATE_SET_STATEMENT(size);
+GENERATE_SET_STATEMENT(comm);
 
 
 
@@ -92,6 +98,8 @@ void print_symbols(document_t *document);
 document_t *document_new(void);
 
 statement_t *statement_new(document_t *, token_t *);
+token_t *statement_first_token(statement_t *);
+token_t *statement_last_token(statement_t *);
 
 void print_statements(document_t *tree);
 

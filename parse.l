@@ -3,11 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "parse.h"
+#include "document.h"
 
 #include "y.tab.h"
 
 #define ENLIST(tkn) {							\
-	yylval.token = new_token(yytext, yyleng, yyspclen, tkn);	\
+	yylval.token = new_token(document, yytext, yyleng, yyspclen, tkn);\
 	yyspclen = 0;							\
 	return tkn;							\
 }
@@ -15,7 +16,7 @@
 static int yyspclen;
 
 /* TODO(pboldin): Reuse yystate for that, do need for ->type */
-token_t *new_token(const char *text, int l, int sl, int type)
+token_t *new_token(document_t *document, const char *text, int l, int sl, int type)
 {
 	token_t *t;
 	
@@ -26,6 +27,16 @@ token_t *new_token(const char *text, int l, int sl, int type)
 	t->type = type;
 	list_init(&t->list);
 	list_init(&t->siblings);
+
+	list_append(&document->tokens, &t->list);
+	switch (type) {
+	case NEWLINE:
+	case COMMENT:
+		break;
+	default:
+		list_append(&document->statement_tokens, &t->siblings);
+		break;
+	}
 
 	strncpy(t->buf, text, l);
 	t->txt = t->buf + sl;
