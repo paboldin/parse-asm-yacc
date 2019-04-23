@@ -5,8 +5,9 @@
 
 #include <elf.h>
 
-#include "document.h"
+
 #include "parse.h"
+#include "document.h"
 
 #include "y.tab.h"
 
@@ -198,7 +199,7 @@ statement_t *statement_new(document_t *document, token_t *token, token_t *lookah
 		 * but deemed to be too complex)
 		 */
 		list_del(&lookahead->siblings);
-		list_append(&document->statement_tokens, &lookahead->siblings);
+		link_token(document, lookahead);
 	}
 	list_append(&stmt->tokens, &token->siblings);
 
@@ -235,6 +236,18 @@ token_t *statement_first_token(statement_t *stmt)
 		return NULL;
 
 	return list_first_entry(&stmt->tokens, token_t, siblings);
+}
+
+void link_token(document_t *document, token_t *token)
+{
+	switch (token->type) {
+	case NEWLINE:
+	case COMMENT:
+		break;
+	default:
+		list_append(&document->statement_tokens, &token->siblings);
+		break;
+	}
 }
 
 const char *symtype2str(int type)

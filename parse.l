@@ -29,14 +29,7 @@ token_t *new_token(document_t *document, const char *text, int l, int sl, int ty
 	list_init(&t->siblings);
 
 	list_append(&document->tokens, &t->list);
-	switch (type) {
-	case NEWLINE:
-	case COMMENT:
-		break;
-	default:
-		list_append(&document->statement_tokens, &t->siblings);
-		break;
-	}
+	link_token(document, t);
 
 	strncpy(t->buf, text, l);
 	t->txt = t->buf + sl;
@@ -96,9 +89,9 @@ RESTORNOT	[^;\n]*
 
 ^#[^\n]*		ENLIST(COMMENT)
 
-{ALPHA}{ALNUMP}*: { yyleng--; ENLIST(LABEL) }
+\.?{ALPHA}{ALNUMP}*: { yyleng--; ENLIST(LABEL) }
 
-({DIGIT}+|\.{ALPHA}{ALNUM}*): { yyleng--; ENLIST(LLABEL) }
+{DIGIT}+: { yyleng--; ENLIST(LLABEL) }
 
 
 \"(\\.|[^\\"])*\"	|

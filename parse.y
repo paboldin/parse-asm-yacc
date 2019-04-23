@@ -61,7 +61,7 @@ do {								\
 %type <token> comment_or_newline semicolons
 
 %type <statement> labels statement_without_label statement_maybe_labels
-%type <statement> statement statements line lines file aux_directive
+%type <statement> statement statements aux_directive
 
 %start file
 

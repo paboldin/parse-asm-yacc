@@ -101,6 +101,8 @@ document_t *document_new(void);
 statement_t *statement_new(document_t *, token_t *, token_t *);
 void symbol_add_statement(document_t *, statement_t *);
 
+void link_token(document_t *document, token_t *token);
+
 token_t *statement_first_token(statement_t *);
 token_t *statement_last_token(statement_t *);
 
