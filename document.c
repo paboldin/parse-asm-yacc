@@ -187,7 +187,7 @@ void print_statements(document_t *document)
 	}
 }
 
-statement_t *statement_new(document_t *document, token_t *token)
+statement_t *statement_new(document_t *document, token_t *token, token_t *lookahead)
 {
 	statement_t *stmt;
 	token_t *t;
@@ -199,8 +199,16 @@ statement_t *statement_new(document_t *document, token_t *token)
 	/* link tokens */
 	list_init(&stmt->tokens);
 	list_del(&document->statement_tokens);
+	if (lookahead) {
+		/* FIXME(pboldin): sad hack to remove lookahead from the
+		 * siblings list.  Either this or manually linking all the
+		 * tokens (which how it was actually and maybe this was better,
+		 * but deemed to be too complex)
+		 */
+		list_del(&lookahead->siblings);
+		list_append(&document->statement_tokens, &lookahead->siblings);
+	}
 	list_append(&stmt->tokens, &token->siblings);
-	list_init(&document->statement_tokens);
 
 	/* link statement */
 	list_init(&stmt->list);

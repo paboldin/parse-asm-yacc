@@ -97,7 +97,8 @@ void print_symbols(document_t *document);
 
 document_t *document_new(void);
 
-statement_t *statement_new(document_t *, token_t *);
+statement_t *statement_new(document_t *, token_t *, token_t *);
+
 token_t *statement_first_token(statement_t *);
 token_t *statement_last_token(statement_t *);
 

@@ -27,6 +27,13 @@ void yyerror(document_t *document, const char *msg)
 	fprintf(stderr, "l%d: %s\n", yylineno, msg);
 }
 
+#define STATEMENT_NEW(tkn)					\
+do {								\
+	yyval.statement = statement_new(document, tkn,		\
+					yychar != YYEMPTY ?	\
+					yylval.token : NULL);	\
+} while (0)
+
 %}
 
 %union {
@@ -57,6 +64,8 @@ void yyerror(document_t *document, const char *msg)
 %start file
 
 %param {document_t *document}
+
+
 
 %%
 
@@ -116,39 +125,39 @@ directive:
 
 aux_directive:
 		DIRECTIVE_WEAK	TOKEN[symbol] {
-			$$ = statement_new(document, $1);
+			STATEMENT_NEW($1);
 			setsymbolweak(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_GLOBL TOKEN[symbol] {
-			$$ = statement_new(document, $1);
+			STATEMENT_NEW($1);
 			setsymbolglobl_or_local(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_LOCAL TOKEN[symbol] {
-			$$ = statement_new(document, $1);
+			STATEMENT_NEW($1);
 			setsymbolglobl_or_local(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_HIDDEN TOKEN[symbol] {
-			$$ = statement_new(document, $1);
+			STATEMENT_NEW($1);
 			setsymbolhidden(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_PROTECTED TOKEN[symbol] {
-			$$ = statement_new(document, $1);
+			STATEMENT_NEW($1);
 			setsymbolprotected(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_INTERNAL TOKEN[symbol] {
-			$$ = statement_new(document, $1);
+			STATEMENT_NEW($1);
 			setsymbolinternal(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_TYPE[directive] TOKEN[symbol] COMMA TOKEN[type] {
-			$$ = statement_new(document, $1);
+			STATEMENT_NEW($1);
 			setsymboltype(document, $symbol->txt, $$, $type);
 		}
 	|	DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN {
-			$$ = statement_new(document, $1);
+			STATEMENT_NEW($1);
 			setsymbolsize(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_COMM TOKEN[symbol] COMMA tokens_comma {
-			$$ = statement_new(document, $1);
+			STATEMENT_NEW($1);
 			setsymbolcomm(document, $symbol->txt, $$);
 		}
 	;
@@ -166,7 +175,7 @@ directive_or_tokens:
 
 statement_without_label:
 		directive_or_tokens[statement_tokens] {
-			$$ = statement_new(document, $statement_tokens);
+			STATEMENT_NEW($1);
 		}
 	|	aux_directive
 	;
@@ -178,7 +187,7 @@ labels_tokens:
 
 labels:
 		labels_tokens {
-			$$ = statement_new(document, $labels_tokens);
+			STATEMENT_NEW($1);
 			setsymbollabel(document,
 				statement_last_token($$)->txt,
 				$$);

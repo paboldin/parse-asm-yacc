@@ -48,6 +48,7 @@ list_del(list_t *list)
 {
 	list->prev->next = list->next;
 	list->next->prev = list->prev;
+	list_init(list);
 }
 
 #define __container_of(ptr, sample, member)                             \
