@@ -34,6 +34,10 @@ do {								\
 					yylval.token : NULL);	\
 } while (0)
 
+#define SETSECTION(name)		setsection(document, (name))
+#define SETSECTIONWITHARGS(name, args)	setsectionwithargs(document, (name), (args))
+#define PREVIOUSSECTION()		previoussection(document)
+#define POPSECTION()			popsection(document)
 #define	SYMBOL_ADD_STATEMENT(stmt)	symbol_add_statement(document, (stmt))
 #define	SECTION_ADD_STATEMENT(stmt)	section_add_statement(document, (stmt))
 
@@ -114,23 +118,23 @@ section_args:
 
 directive_section:
 		DIRECTIVE_SECTION TOKEN[name] section_args {
-			SETSECTIONWITHARGS($name->txt, $$, $section_args);
+			SETSECTIONWITHARGS($name->txt, $section_args);
 		}
 	|	DIRECTIVE_PUSHSECTION TOKEN[name] section_args {
-			SETSECTIONWITHARGS($name->txt, $$, $section_args);
+			SETSECTIONWITHARGS($name->txt, $section_args);
 		}
 	;
 
 directive_sections:
 		directive_section
-	|	DIRECTIVE_TEXT { SETSECTION(".text", $$); }
-	|	DIRECTIVE_DATA { SETSECTION(".data", $$); }
-	|	DIRECTIVE_BSS  { SETSECTION(".bss", $$); }
+	|	DIRECTIVE_TEXT { SETSECTION(".text"); }
+	|	DIRECTIVE_DATA { SETSECTION(".data"); }
+	|	DIRECTIVE_BSS  { SETSECTION(".bss"); }
 	|	DIRECTIVE_SUBSECTION TOKEN {
 			YYERROR;
 		}
-	|	DIRECTIVE_PREVIOUS { PREVIOUSSECTION($$); }
-	|	DIRECTIVE_POPSECTION	{ POPSECTION($$); }
+	|	DIRECTIVE_PREVIOUS { PREVIOUSSECTION(); }
+	|	DIRECTIVE_POPSECTION	{ POPSECTION(); }
 	;
 
 file_directive:
@@ -276,7 +280,7 @@ lines:
 
 file:
 		lines {
-			SETSECTION(NULL, NULL);
+			SETSECTION(NULL);
 		}
 	;
 

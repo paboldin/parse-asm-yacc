@@ -73,19 +73,19 @@ typedef struct document {
 	struct symbol *symbols;
 } document_t;
 
-section_t *setsection(document_t *, const char *, token_t *);
-void previoussection(document_t *, token_t *);
-void popsection(document_t *, token_t *);
+section_t *setsection(document_t *, const char *);
+void previoussection(document_t *);
+void popsection(document_t *);
 
 void section_set_args(section_t *section, struct section_args args);
 
 static inline
 section_t *setsectionwithargs(document_t *document, const char *name,
-			      token_t *token, struct section_args args)
+			      struct section_args args)
 {
 	section_t *section;
 
-	section = setsection(document, name, token);
+	section = setsection(document, name);
 	section_set_args(section, args);
 
 	return section;
@@ -96,12 +96,6 @@ int is_data_sect(section_t *section)
 {
 	return section->type & SECTION_EXECUTABLE;
 }
-
-#define SETSECTION(name, token)		setsection(document, (name), (token))
-#define SETSECTIONWITHARGS(name, token, args) setsectionwithargs(document, (name), (token), (args))
-#define PREVIOUSSECTION(token)	previoussection(document, (token))
-#define POPSECTION(token)	popsection(document, (token))
-
 
 struct symbol *getsymbol(document_t *, const char *name);
 struct symbol *setsymbol(document_t *, const char *name);

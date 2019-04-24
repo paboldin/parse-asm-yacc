@@ -132,7 +132,7 @@ void section_set_args(section_t *section, struct section_args args)
 		section->type |= SECTION_EXECUTABLE;
 }
 
-section_t *setsection(document_t *document, const char *name, token_t *token)
+section_t *setsection(document_t *document, const char *name)
 {
 	section_t *section;
 
@@ -148,7 +148,7 @@ section_t *setsection(document_t *document, const char *name, token_t *token)
 	return section;
 }
 
-void popsection(document_t *document, token_t *token)
+void popsection(document_t *document)
 {
 	section_t *s = document->section->next;
 
@@ -157,7 +157,7 @@ void popsection(document_t *document, token_t *token)
 	reset_symbols(document);
 }
 
-void previoussection(document_t *document, token_t *token)
+void previoussection(document_t *document)
 {
 	section_t *s = document->section;
 
