@@ -109,6 +109,7 @@ directive_section:
 	|	directive_pop_stack
 	;
 
+/* TODO(pboldin): some of these should not be considered a part of symbol */
 directive:
 		DIRECTIVE_FILE tokens_space
 
@@ -119,10 +120,10 @@ directive:
 	|	DIRECTIVE_SET	TOKEN COMMA tokens
 
 	|	DIRECTIVE_DATA_DEF
+	|	DIRECTIVE_STRING TOKEN
 	|	DIRECTIVE_CFI_IGNORED
 	|	DIRECTIVE_LOC_IGNORED
-	|	DIRECTIVE_STRING TOKEN
-	|	DIRECTIVE_IDENT TOKEN
+	|	DIRECTIVE_IDENT TOKEN { SETSECTION(NULL, NULL); }
 	;
 
 aux_directive:
