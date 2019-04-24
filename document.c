@@ -394,3 +394,38 @@ void print_dbgfilter(document_t *document)
 		newline = token->type == NEWLINE;
 	}
 }
+
+void print_siblings(list_t *list, const char *prefix)
+{
+       token_t *token;
+
+       if (list->next == list)
+               return;
+
+       list_for_each_entry(token, list, siblings) {
+               if (prefix != NULL) {
+                       printf("%s(l%d)", prefix, token->lineno);
+                       prefix = NULL;
+               }
+               printf("(%s)%s", get_token_name(token->type), token->buf);
+       }
+       printf("\n");
+}
+
+void print_tokens(token_t *t, const char *prefix)
+{
+       token_t *nsbl = t, *ntkn = t;
+       if (t == NULL)
+               return;
+
+       if (prefix != NULL)
+               printf("%s(l%d)", prefix, t->lineno);
+
+       do {
+               printf("(%s)%s", get_token_name(ntkn->type), ntkn->buf);
+
+               nsbl = sibling_next(nsbl);
+               ntkn = token_next(ntkn);
+       } while (nsbl == ntkn);
+       printf("\n");
+}

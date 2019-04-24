@@ -125,11 +125,6 @@ GENERATE_SETSYMBOL(comm);
 GENERATE_SETSYMBOL(set);
 
 
-void print_dbgfilter(document_t *document);
-
-void print_symbol(struct symbol *s);
-void print_symbols(document_t *document);
-
 document_t *document_new(void);
 
 statement_t *statement_new(document_t *, token_t *, token_t *);
@@ -138,9 +133,16 @@ void section_add_statement(document_t *, statement_t *);
 
 void link_token(document_t *document, token_t *token);
 
+
 token_t *statement_first_token(statement_t *);
 token_t *statement_last_token(statement_t *);
 
+
+void print_dbgfilter(document_t *document);
+void print_symbol(struct symbol *s);
+void print_symbols(document_t *document);
 void print_statements(document_t *tree);
+void print_tokens(token_t *t, const char *prefix);
+void print_siblings(list_t *list, const char *prefix);
 
 #endif /* DOCUMENT_H_INCLUDED */
