@@ -22,7 +22,6 @@ typedef struct token {
 	list_t siblings;
 
 	int type;
-	int spclength;
 	int lineno;
 	char *txt;
 	char buf[];

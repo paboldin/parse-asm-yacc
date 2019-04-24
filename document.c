@@ -153,6 +153,7 @@ struct symbol *symbol_new(const char *name, section_t *section)
 		abort();
 
 	h->section = section;
+	h->next = NULL;
 
 	return h;
 }
@@ -285,9 +286,16 @@ section_t *document_get_section(document_t *document, const char *name)
 		abort();
 
 	h->name = strdup(name);
-	list_init(&h->statements);
+
+	h->type = 0;
 	if (STREQ(name, ".text"))
 		h->type |= SECTION_EXECUTABLE;
+
+	memset(&h->args, 0, sizeof(h->args));
+	h->next = NULL;
+	list_init(&h->statements);
+
+
 link:
 	if (h != document->sections)
 		h->next = document->sections;
@@ -374,6 +382,7 @@ document_new(void)
 
 	document->section = document->prev_section = NULL;
 	document->symbols = NULL;
+	document->sections = NULL;
 
 	reset_symbols(document);
 
@@ -486,4 +495,6 @@ void document_free(document_t *document)
 	list_for_each_entry_safe(stmt, tstmt, &document->statements, list) {
 		free(stmt);
 	}
+
+	free(document);
 }

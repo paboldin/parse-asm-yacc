@@ -99,7 +99,7 @@ token_t *new_token(int type, yyscan_t scanner, document_t *document)
 	int l = yyget_leng(scanner);
 	int sl = yyget_extra(scanner);
 
-	t = malloc(sizeof(*t) + l + sl + 1);
+	t = malloc(sizeof(*t) + l + sl + 2);
 	if (t == NULL) abort();
 
 	t->lineno = lineno;
@@ -110,7 +110,7 @@ token_t *new_token(int type, yyscan_t scanner, document_t *document)
 	list_append(&document->tokens, &t->list);
 	link_token(document, t);
 
-	strncpy(t->buf, text, l);
+	strcpy(t->buf, text);
 	t->txt = t->buf + sl;
 
 	return t;
