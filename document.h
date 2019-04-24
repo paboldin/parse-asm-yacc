@@ -73,19 +73,65 @@ typedef struct document {
 	struct symbol *symbols;
 } document_t;
 
-section_t *setsection(document_t *, const char *);
-void previoussection(document_t *);
-void popsection(document_t *);
+/* Token functions */
+
+void print_tokens(token_t *t, const char *prefix);
+void link_token(document_t *document, token_t *token);
+
+/* Statement functions */
+
+statement_t *statement_new(document_t *, token_t *, token_t *);
+void symbol_add_statement(document_t *, statement_t *);
+void section_add_statement(document_t *, statement_t *);
+token_t *statement_first_token(statement_t *);
+token_t *statement_last_token(statement_t *);
+
+/* Symbol functions */
+
+struct symbol *document_get_symbol(document_t *, const char *name);
+struct symbol *document_set_symbol(document_t *, const char *name);
+
+void symbol_set_type(document_t *, const char *name,
+		     statement_t *stmt, token_t *type);
+void symbol_set_label(document_t *document, const char *name, statement_t *stmt);
+
+
+#define GENERATE_SYMBOL_SET_(statement_name)				\
+static inline void							\
+symbol_set_ ## statement_name (document_t *document,			\
+			       const char *name, statement_t *stmt)	\
+{									\
+	struct symbol *s = document_get_symbol(document, name);		\
+	s->aux.statement_name = stmt;					\
+	list_append(&s->statements, &stmt->symbol);			\
+}
+
+GENERATE_SYMBOL_SET_(globl_or_local);
+GENERATE_SYMBOL_SET_(weak);
+GENERATE_SYMBOL_SET_(hidden);
+GENERATE_SYMBOL_SET_(protected);
+GENERATE_SYMBOL_SET_(internal);
+GENERATE_SYMBOL_SET_(size);
+GENERATE_SYMBOL_SET_(comm);
+GENERATE_SYMBOL_SET_(set);
+
+void symbol_print(struct symbol *s);
+
+/* Section functions */
+
+section_t *document_set_section(document_t *, const char *);
+void document_previous_section(document_t *);
+void document_pop_section(document_t *);
 
 void section_set_args(section_t *section, struct section_args args);
 
 static inline
-section_t *setsectionwithargs(document_t *document, const char *name,
-			      struct section_args args)
+section_t *document_set_section_with_args(document_t *document, const char *name,
+					  struct section_args args)
 {
 	section_t *section;
 
-	section = setsection(document, name);
+	section = document_set_section(document, name);
 	section_set_args(section, args);
 
 	return section;
@@ -97,55 +143,14 @@ int is_data_sect(section_t *section)
 	return section->type & SECTION_EXECUTABLE;
 }
 
-struct symbol *getsymbol(document_t *, const char *name);
-struct symbol *setsymbol(document_t *, const char *name);
-
-void setsymboltype(document_t *, const char *name,
-		   statement_t *stmt, token_t *type);
-void setsymbollabel(document_t *document, const char *name, statement_t *stmt);
-
-
-#define GENERATE_SETSYMBOL(statement_name)				\
-static inline void							\
-setsymbol ## statement_name (document_t *document,			\
-			     const char *name, statement_t *stmt)	\
-{									\
-	struct symbol *s = getsymbol(document, name);			\
-	s->aux.statement_name = stmt;					\
-	list_append(&s->statements, &stmt->symbol);			\
-}
-
-GENERATE_SETSYMBOL(globl_or_local);
-GENERATE_SETSYMBOL(weak);
-GENERATE_SETSYMBOL(hidden);
-GENERATE_SETSYMBOL(protected);
-GENERATE_SETSYMBOL(internal);
-GENERATE_SETSYMBOL(size);
-GENERATE_SETSYMBOL(comm);
-GENERATE_SETSYMBOL(set);
-
+/* Document functions */
 
 document_t *document_new(void);
 document_t *document_parse_file(FILE *fh);
 void document_print(document_t *document);
 void document_free(document_t *document);
-
-statement_t *statement_new(document_t *, token_t *, token_t *);
-void symbol_add_statement(document_t *, statement_t *);
-void section_add_statement(document_t *, statement_t *);
-
-void link_token(document_t *document, token_t *token);
-
-
-token_t *statement_first_token(statement_t *);
-token_t *statement_last_token(statement_t *);
-
-
-void print_dbgfilter(document_t *document);
-void print_symbol(struct symbol *s);
-void print_symbols(document_t *document);
-void print_statements(document_t *tree);
-void print_tokens(token_t *t, const char *prefix);
-void print_siblings(list_t *list, const char *prefix);
+void document_print_dbgfilter(document_t *document);
+void document_print_symbols(document_t *document);
+void document_print_statements(document_t *tree);
 
 #endif /* DOCUMENT_H_INCLUDED */

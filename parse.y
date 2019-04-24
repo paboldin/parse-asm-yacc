@@ -35,12 +35,12 @@ do {								\
 					yylval.token : NULL);	\
 } while (0)
 
-#define SETSECTION(name)		setsection(document, (name))
-#define SETSECTIONWITHARGS(name, args)	setsectionwithargs(document, (name), (args))
-#define PREVIOUSSECTION()		previoussection(document)
-#define POPSECTION()			popsection(document)
-#define	SYMBOL_ADD_STATEMENT(stmt)	symbol_add_statement(document, (stmt))
-#define	SECTION_ADD_STATEMENT(stmt)	section_add_statement(document, (stmt))
+#define SETSECTION(name)		document_set_section(document, (name))
+#define SETSECTIONWITHARGS(name, args)	document_set_section_with_args(document, (name), (args))
+#define PREVIOUSSECTION()		document_previous_section(document)
+#define POPSECTION()			document_pop_section(document)
+#define	SYMBOL_ADD_STATEMENT(stmt)	document_symbol_add_statement(document, (stmt))
+#define	SECTION_ADD_STATEMENT(stmt)	document_section_add_statement(document, (stmt))
 
 %}
 
@@ -161,43 +161,43 @@ symbol_directive:
 aux_directive:
 		DIRECTIVE_WEAK	TOKEN[symbol] {
 			STATEMENT_NEW($1);
-			setsymbolweak(document, $symbol->txt, $$);
+			symbol_set_weak(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_GLOBL TOKEN[symbol] {
 			STATEMENT_NEW($1);
-			setsymbolglobl_or_local(document, $symbol->txt, $$);
+			symbol_set_globl_or_local(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_LOCAL TOKEN[symbol] {
 			STATEMENT_NEW($1);
-			setsymbolglobl_or_local(document, $symbol->txt, $$);
+			symbol_set_globl_or_local(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_HIDDEN TOKEN[symbol] {
 			STATEMENT_NEW($1);
-			setsymbolhidden(document, $symbol->txt, $$);
+			symbol_set_hidden(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_PROTECTED TOKEN[symbol] {
 			STATEMENT_NEW($1);
-			setsymbolprotected(document, $symbol->txt, $$);
+			symbol_set_protected(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_INTERNAL TOKEN[symbol] {
 			STATEMENT_NEW($1);
-			setsymbolinternal(document, $symbol->txt, $$);
+			symbol_set_internal(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_TYPE[directive] TOKEN[symbol] COMMA TOKEN[type] {
 			STATEMENT_NEW($1);
-			setsymboltype(document, $symbol->txt, $$, $type);
+			symbol_set_type(document, $symbol->txt, $$, $type);
 		}
 	|	DIRECTIVE_SIZE TOKEN[symbol] COMMA TOKEN {
 			STATEMENT_NEW($1);
-			setsymbolsize(document, $symbol->txt, $$);
+			symbol_set_size(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_COMM TOKEN[symbol] COMMA tokens_comma {
 			STATEMENT_NEW($1);
-			setsymbolcomm(document, $symbol->txt, $$);
+			symbol_set_comm(document, $symbol->txt, $$);
 		}
 	|	DIRECTIVE_SET TOKEN[symbol] COMMA tokens {
 			STATEMENT_NEW($1);
-			setsymbolset(document, $symbol->txt, $$);
+			symbol_set_set(document, $symbol->txt, $$);
 		}
 	;
 
@@ -235,7 +235,7 @@ labels_tokens:
 labels:
 		labels_tokens {
 			STATEMENT_NEW($1);
-			setsymbollabel(document,
+			symbol_set_label(document,
 				statement_last_token($$)->txt,
 				$$);
 		}
