@@ -25,7 +25,7 @@ const char * const *token_name = yytname;
 
 void yyerror(yyscan_t yyscanner, document_t *document, const char *msg)
 {
-	fprintf(stderr, "l??: %s\n", msg);
+	fprintf(stderr, "l%d: %s\n", yyget_lineno(yyscanner), msg);
 }
 
 #define STATEMENT_NEW(tkn)					\
