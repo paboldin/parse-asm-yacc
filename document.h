@@ -126,6 +126,9 @@ GENERATE_SETSYMBOL(set);
 
 
 document_t *document_new(void);
+document_t *document_parse_file(FILE *fh);
+void document_print(document_t *document);
+void document_free(document_t *document);
 
 statement_t *statement_new(document_t *, token_t *, token_t *);
 void symbol_add_statement(document_t *, statement_t *);

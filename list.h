@@ -2,6 +2,8 @@
 #ifndef LIST_H_INCLUDED
 #define LIST_H_INCLUDED
 
+/* Some of this code shamelessly taken from kernel */
+
 #define offsetof(TYPE, MEMBER)	((unsigned long) &((TYPE *)0)->MEMBER)
 #define container_of(ptr, type, member)	\
 	((type *)(((void *)(ptr)) - offsetof(type, member)))
@@ -58,5 +60,11 @@ list_del(list_t *list)
     for (pos = __container_of((head)->next, pos, member);               \
          &pos->member != (head);                                        \
          pos = __container_of(pos->member.next, pos, member))
+
+#define list_for_each_entry_safe(pos, tmp, head, member)                \
+    for (pos = __container_of((head)->next, pos, member),               \
+         tmp = __container_of(pos->member.next, pos, member);           \
+         &pos->member != (head);                                        \
+         pos = tmp, tmp = __container_of(pos->member.next, tmp, member))
 
 #endif /* LIST_H_INCLUDED */

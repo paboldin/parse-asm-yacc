@@ -8,6 +8,7 @@
 
 #include "parse.h"
 #include "document.h"
+#include "flex.h"
 
 #include "y.tab.h"
 
@@ -431,4 +432,58 @@ void print_tokens(token_t *t, const char *prefix)
                ntkn = token_next(ntkn);
        } while (nsbl == ntkn);
        printf("\n");
+}
+
+void document_print(document_t *document)
+{
+	print_statements(document);
+	print_symbols(document);
+	print_dbgfilter(document);
+}
+
+document_t *document_parse_file(FILE *fh)
+{
+	document_t *document;
+	yyscan_t scanner;
+
+	yylex_init(&scanner);
+
+	yyset_in(fh, scanner);
+	document = document_new();
+	if (yyparse(scanner, document))
+		return NULL;
+
+	yylex_destroy(scanner);
+
+	return document;
+}
+
+void document_free(document_t *document)
+{
+	struct symbol *symbol = document->symbols, *nsymbol;
+	struct section *section = document->sections, *nsection;
+	statement_t *stmt, *tstmt;
+	token_t *tkn, *ttkn;
+
+	while (symbol) {
+		nsymbol = symbol->next;
+		free((void *)symbol->name);
+		free(symbol);
+		symbol = nsymbol;
+	}
+
+	while (section) {
+		nsection = section->next;
+		free((void *)section->name);
+		free(section);
+		section = nsection;
+	}
+
+	list_for_each_entry_safe(tkn, ttkn, &document->tokens, list) {
+		free(tkn);
+	}
+
+	list_for_each_entry_safe(stmt, tstmt, &document->statements, list) {
+		free(stmt);
+	}
 }

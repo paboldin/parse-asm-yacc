@@ -11,29 +11,21 @@ int main(int argc, char **argv) {
 	yydebug = 1;
 #endif
 	for (i = 1; i < argc; i++) {
-		FILE *in;
-
+		FILE *fh;
 		document_t *document;
-		yyscan_t scanner;
 
-		in = fopen(argv[1], "r");
-		if (in == NULL) {
+		fh = fopen(argv[i], "r");
+		if (fh == NULL) {
 			perror("fopen");
 			abort();
 		}
 
-		yylex_init(&scanner);
-
-		yyset_in(in, scanner);
-		document = document_new();
-		if (!yyparse(scanner, document)) {
-			print_statements(document);
-			print_symbols(document);
-			print_dbgfilter(document);
+		document = document_parse_file(fh);
+		if (document) {
+			document_print(document);
+			document_free(document);
 		}
 
-		yylex_destroy(scanner);
-
-		fclose(in);
+		fclose(fh);
 	}
 }
