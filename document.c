@@ -265,7 +265,7 @@ void reset_symbols(document_t *document)
 }
 
 static
-section_t *getsection(document_t *document, const char *name)
+section_t *document_get_section(document_t *document, const char *name)
 {
 	section_t *h = document->sections, *p = NULL;
 
@@ -311,7 +311,7 @@ section_t *document_set_section(document_t *document, const char *name)
 	if (!name)
 		return NULL;
 
-	section = getsection(document, name);
+	section = document_get_section(document, name);
 	document->prev_section = document->section;
 	document->section = section;
 
@@ -377,7 +377,7 @@ document_new(void)
 
 	reset_symbols(document);
 
-	document->section = getsection(document, ".text");
+	document->section = document_get_section(document, ".text");
 
 	return document;
 }
