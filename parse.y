@@ -114,10 +114,8 @@ nonsymbol_directive:
 
 
 	|	directive_section
-
-	|	DIRECTIVE_ALIGN
-
-	|	DIRECTIVE_IDENT TOKEN { SETSECTION(NULL, NULL); }
+	|	DIRECTIVE_ALIGN TOKEN
+	|	DIRECTIVE_IDENT TOKEN
 	;
 
 symbol_directive:
