@@ -12,7 +12,9 @@
 
 #include "list.h"
 #include "parse.h"
+#include "y.tab.h"
 #include "document.h"
+#include "flex.h"
 
 YY_DECL;
 
@@ -21,10 +23,9 @@ extern FILE* yyin;
 static const char *const yytname[];
 const char * const *token_name = yytname;
 
-extern int yylineno;
-void yyerror(document_t *document, const char *msg)
+void yyerror(yyscan_t yyscanner, document_t *document, const char *msg)
 {
-	fprintf(stderr, "l%d: %s\n", yylineno, msg);
+	fprintf(stderr, "l??: %s\n", msg);
 }
 
 #define STATEMENT_NEW(tkn)					\
@@ -42,6 +43,8 @@ do {								\
 #define	SECTION_ADD_STATEMENT(stmt)	section_add_statement(document, (stmt))
 
 %}
+
+%define api.pure full
 
 %union {
 	token_t *token;
@@ -73,6 +76,7 @@ do {								\
 
 %start file
 
+%param {yyscan_t yyscanner}
 %param {document_t *document}
 
 

@@ -7,38 +7,20 @@
 
 #include "y.tab.h"
 
+token_t *new_token(int type, yyscan_t scanner, document_t *document);
 #define ENLIST(tkn) {							\
-	yylval.token = new_token(document, yytext, yyleng, yyspclen, tkn);\
-	yyspclen = 0;							\
+	yylval->token = new_token(tkn, yyscanner, document);		\
+	yyset_extra(0, yyscanner);					\
 	return tkn;							\
 }
 
-static int yyspclen;
-
 /* TODO(pboldin): Reuse yystate for that, do need for ->type */
-token_t *new_token(document_t *document, const char *text, int l, int sl, int type)
-{
-	token_t *t;
-	
-	t = malloc(sizeof(*t) + l + sl + 1);
-	if (t == NULL) abort();
-
-	t->lineno = yylineno;
-	t->type = type;
-	list_init(&t->list);
-	list_init(&t->siblings);
-
-	list_append(&document->tokens, &t->list);
-	link_token(document, t);
-
-	strncpy(t->buf, text, l);
-	t->txt = t->buf + sl;
-
-	return t;
-}
 %}
 
 %option yylineno
+%option reentrant
+%option header-file="flex.h"
+%option extra-type="int"
 
 ALNUM	[A-Za-z0-9_]
 ALNUMP	[A-Za-z0-9_.]
@@ -100,7 +82,7 @@ RESTORNOT	[^;\n]*
 [^ \[\]\t\n;,]+		ENLIST(TOKEN)
 
 
-[ \t]+		{ yyspclen = yyleng; yymore(); }
+[ \t]+		{ yyset_extra(yyleng, yyscanner); yymore(); }
 
 ;	ENLIST(SEMICOLON)
 {SPACE}\n	ENLIST(NEWLINE)
@@ -108,3 +90,28 @@ RESTORNOT	[^;\n]*
 ,	ENLIST(COMMA)
 
 %%
+
+token_t *new_token(int type, yyscan_t scanner, document_t *document)
+{
+	token_t *t;
+	const char *text = yyget_text(scanner);
+	int lineno = yyget_lineno(scanner);
+	int l = yyget_leng(scanner);
+	int sl = yyget_extra(scanner);
+
+	t = malloc(sizeof(*t) + l + sl + 1);
+	if (t == NULL) abort();
+
+	t->lineno = lineno;
+	t->type = type;
+	list_init(&t->list);
+	list_init(&t->siblings);
+
+	list_append(&document->tokens, &t->list);
+	link_token(document, t);
+
+	strncpy(t->buf, text, l);
+	t->txt = t->buf + sl;
+
+	return t;
+}

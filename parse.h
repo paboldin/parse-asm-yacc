@@ -39,6 +39,7 @@ struct section_args {
 	token_t *arguments;
 };
 
-#define YY_DECL int yylex(document_t *document)
+typedef void * yyscan_t;
+#define YY_DECL int yylex(YYSTYPE *yylval, yyscan_t yyscanner, document_t *document)
 
 #endif /* PARSE_H_INCLUDED */
