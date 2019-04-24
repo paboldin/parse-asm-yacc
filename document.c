@@ -82,8 +82,11 @@ setsymbollabel(document_t *document, const char *name, statement_t *stmt)
 {
 	struct symbol *s;
 
-	if (name[0] == '.' && !is_data_sect(document->section))
+	if (name[0] == '.' && !is_data_sect(document->section)) {
+		/* .Lnum label inside a function */
+		symbol_add_statement(document, stmt);
 		return;
+	}
 
 	s = setsymbol(document, name);
 	s->aux.label = stmt;
