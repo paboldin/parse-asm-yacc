@@ -10,7 +10,7 @@ all: parser
 tests: all
 	@for f in $$(find tests -iname \*.s); do \
 		echo running $$f; \
-		./parser $$f; \
+		./parser $$f || break; \
 	done
 
 parser: y.tab.o y.tab.h lex.yy.o document.o
