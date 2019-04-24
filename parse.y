@@ -56,9 +56,9 @@ do {								\
 %token <token> COMMENT
 
 %type <token> tokens_comma tokens_space tokens directive_pop_stack 
-%type <token> directive_section directive directive_or_tokens
-%type <token> labels_tokens label semicolons_or_comment_or_newline
-%type <token> comment_or_newline semicolons
+%type <token> directive_section nonsymbol_directive symbol_directive
+%type <token> symbol_directive_or_tokens labels_tokens label
+%type <token> semicolons_or_comment_or_newline comment_or_newline semicolons
 
 %type <statement> labels statement_without_label statement_maybe_labels
 %type <statement> statement statements aux_directive
@@ -109,21 +109,22 @@ directive_section:
 	|	directive_pop_stack
 	;
 
-/* TODO(pboldin): some of these should not be considered a part of symbol */
-directive:
+nonsymbol_directive:
 		DIRECTIVE_FILE tokens_space
 
 
 	|	directive_section
 
 	|	DIRECTIVE_ALIGN
-	|	DIRECTIVE_SET	TOKEN COMMA tokens
 
-	|	DIRECTIVE_DATA_DEF
+	|	DIRECTIVE_IDENT TOKEN { SETSECTION(NULL, NULL); }
+	;
+
+symbol_directive:
+		DIRECTIVE_DATA_DEF
 	|	DIRECTIVE_STRING TOKEN
 	|	DIRECTIVE_CFI_IGNORED
 	|	DIRECTIVE_LOC_IGNORED
-	|	DIRECTIVE_IDENT TOKEN { SETSECTION(NULL, NULL); }
 	;
 
 aux_directive:
@@ -163,6 +164,10 @@ aux_directive:
 			STATEMENT_NEW($1);
 			setsymbolcomm(document, $symbol->txt, $$);
 		}
+	|	DIRECTIVE_SET TOKEN[symbol] COMMA tokens {
+			STATEMENT_NEW($1);
+			setsymbolset(document, $symbol->txt, $$);
+		}
 	;
 
 
@@ -171,17 +176,20 @@ label:
 	|	LLABEL
 	;
 
-directive_or_tokens:
-		directive
+symbol_directive_or_tokens:
+		symbol_directive
 	|	tokens
 	;
 
 statement_without_label:
-		directive_or_tokens[statement_tokens] {
+		symbol_directive_or_tokens[statement_tokens] {
 			STATEMENT_NEW($1);
 			SYMBOL_ADD_STATEMENT($$);
 		}
 	|	aux_directive
+	|	nonsymbol_directive {
+			STATEMENT_NEW($1);
+		}
 	;
 
 labels_tokens:

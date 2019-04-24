@@ -38,6 +38,7 @@ struct symbol {
 		statement_t *internal;
 		statement_t *size;
 		statement_t *comm;
+		statement_t *set;
 	} aux;
 
 	list_t statements;
@@ -97,6 +98,7 @@ GENERATE_SETSYMBOL(protected);
 GENERATE_SETSYMBOL(internal);
 GENERATE_SETSYMBOL(size);
 GENERATE_SETSYMBOL(comm);
+GENERATE_SETSYMBOL(set);
 
 
 void print_dbgfilter(document_t *document);

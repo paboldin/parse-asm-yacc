@@ -80,7 +80,9 @@ setsymboltype(document_t *document, const char *name,
 void
 setsymbollabel(document_t *document, const char *name, statement_t *stmt)
 {
-	struct symbol *s = setsymbol(document, name);
+	struct symbol *s;
+
+	s = setsymbol(document, name);
 	s->aux.label = stmt;
 	list_append(&s->statements, &stmt->symbol);
 }
