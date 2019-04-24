@@ -16,6 +16,14 @@ typedef struct statement {
 	list_t tokens;
 } statement_t;
 
+typedef struct section section_t;
+
+struct section {
+	const char *name;
+
+	section_t *next;
+};
+
 struct symbol {
 	const char *name;
 	int type;
@@ -34,7 +42,7 @@ struct symbol {
 
 	list_t statements;
 
-	struct symbol *section;
+	section_t *section;
 	struct symbol *next;
 };
 
@@ -48,7 +56,7 @@ typedef struct document {
 	/* tokens for current statement */
 	list_t statement_tokens;
 
-	struct symbol *section, *prev_section;
+	section_t *section, *prev_section, *sections;
 
 	struct symbol *current_symbol;
 

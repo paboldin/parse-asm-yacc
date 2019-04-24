@@ -91,37 +91,53 @@ void reset_symbols(document_t *document)
 	document->current_symbol = NULL;
 }
 
-struct symbol *newsection(document_t *document, const char *name)
+static
+section_t *getsection(document_t *document, const char *name)
 {
-	struct symbol *s;
+	section_t *h = document->sections, *p = NULL;
 
-	s = getsymbol(document, name);
-	s->section = NULL;
-	s->type = STT_SECTION;
+	while (h != NULL) {
+		if (!strcmp(h->name, name)) {
+			if (p)
+				p->next = h->next;
+			goto link;
+		}
 
-	return s;
+		p = h;
+		h = h->next;
+	}
+
+	h = malloc(sizeof(*h));
+	if (h == NULL)
+		abort();
+
+	h->name = strdup(name);
+link:
+	if (h != document->sections)
+		h->next = document->sections;
+	document->sections = h;
+
+	return h;
 }
 
 void setsection(document_t *document, const char *name, token_t *token)
 {
-	struct symbol *s;
+	section_t *section;
 
 	reset_symbols(document);
 
 	if (!name)
 		return;
 
-	s = newsection(document, name);
+	section = getsection(document, name);
 	document->prev_section = document->section;
-	document->section = s;
+	document->section = section;
 }
 
 void popsection(document_t *document, token_t *token)
 {
-	struct symbol *s = document->section->next;
+	section_t *s = document->section->next;
 
-	while (s && s->type != STT_SECTION)
-		s = s->next;
 	document->section = s;
 
 	reset_symbols(document);
@@ -129,9 +145,9 @@ void popsection(document_t *document, token_t *token)
 
 void previoussection(document_t *document, token_t *token)
 {
-	struct symbol *s = document->section;
+	section_t *s = document->section;
 
-	document->section = getsymbol(document, document->prev_section->name);
+	document->section = document->prev_section;
 	document->prev_section = s;
 
 	reset_symbols(document);
@@ -150,11 +166,12 @@ document_new(void)
 	list_init(&document->tokens);
 	list_init(&document->statement_tokens);
 
-	document->section = document->prev_section = document->symbols = NULL;
+	document->section = document->prev_section = NULL;
+	document->symbols = NULL;
 
 	reset_symbols(document);
 
-	document->section = newsection(document, ".text");
+	document->section = getsection(document, ".text");
 
 	return document;
 }
