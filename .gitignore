@@ -3,5 +3,6 @@ y.dot
 y.output
 y.tab.[cho]
 lex.yy.c
+flex.h
 parser
 tags
