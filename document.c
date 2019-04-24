@@ -12,6 +12,20 @@
 
 #include "y.tab.h"
 
+
+static inline
+int STREQ(const char *a, const char *b)
+{
+	return !strcmp(a, b);
+}
+
+static inline
+int STRNEQ(const char *a, const char *b)
+{
+	return !STREQ(a, b);
+}
+
+
 static
 struct symbol *newsymbol(const char *name)
 {
@@ -122,6 +136,8 @@ section_t *getsection(document_t *document, const char *name)
 
 	h->name = strdup(name);
 	list_init(&h->statements);
+	if (STREQ(name, ".text"))
+		h->type |= SECTION_EXECUTABLE;
 link:
 	if (h != document->sections)
 		h->next = document->sections;
@@ -192,18 +208,6 @@ document_new(void)
 	document->section = getsection(document, ".text");
 
 	return document;
-}
-
-static inline
-int STREQ(const char *a, const char *b)
-{
-	return !strcmp(a, b);
-}
-
-static inline
-int STRNEQ(const char *a, const char *b)
-{
-	return !STREQ(a, b);
 }
 
 void print_statements(document_t *document)
