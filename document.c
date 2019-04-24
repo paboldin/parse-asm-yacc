@@ -82,6 +82,9 @@ setsymbollabel(document_t *document, const char *name, statement_t *stmt)
 {
 	struct symbol *s;
 
+	if (name[0] == '.' && !is_data_sect(document->section))
+		return;
+
 	s = setsymbol(document, name);
 	s->aux.label = stmt;
 	list_append(&s->statements, &stmt->symbol);
@@ -114,6 +117,7 @@ section_t *getsection(document_t *document, const char *name)
 		abort();
 
 	h->name = strdup(name);
+	list_init(&h->statements);
 link:
 	if (h != document->sections)
 		h->next = document->sections;
@@ -122,18 +126,26 @@ link:
 	return h;
 }
 
-void setsection(document_t *document, const char *name, token_t *token)
+void section_set_args(section_t *section, struct section_args args)
+{
+	if (args.flags && strchr(args.flags->txt, 'x'))
+		section->type |= SECTION_EXECUTABLE;
+}
+
+section_t *setsection(document_t *document, const char *name, token_t *token)
 {
 	section_t *section;
 
 	reset_symbols(document);
 
 	if (!name)
-		return;
+		return NULL;
 
 	section = getsection(document, name);
 	document->prev_section = document->section;
 	document->section = section;
+
+	return section;
 }
 
 void popsection(document_t *document, token_t *token)
@@ -241,6 +253,15 @@ void symbol_add_statement(document_t *document, statement_t *stmt)
 	list_append(&s->statements, &stmt->symbol);
 }
 
+void section_add_statement(document_t *document, statement_t *stmt)
+{
+	section_t *section = document->section;
+
+	if (section == NULL)
+		return;
+	list_append(&section->statements, &stmt->symbol);
+}
+
 token_t *statement_last_token(statement_t *stmt)
 {
 	if (list_empty(&stmt->tokens))
@@ -312,12 +333,37 @@ void print_symbol(struct symbol *s)
 	}
 }
 
+const char *secflags2str(int type)
+{
+	switch (type) {
+	case SECTION_EXECUTABLE:
+		return "x";
+	}
+	return "";
+}
+
+void print_section(section_t *section)
+{
+	statement_t *stmt;
+
+	printf("section: name = %s, flags = %s\n", section->name, secflags2str(section->type));
+	list_for_each_entry(stmt, &section->statements, symbol) {
+		print_statement(stmt, "");
+	}
+}
+
 void print_symbols(document_t *document)
 {
 	struct symbol *h = document->symbols;
+	section_t *section = document->sections;
 	while (h) {
 		print_symbol(h);
 		h = h->next;
+	}
+
+	while (section) {
+		print_section(section);
+		section = section->next;
 	}
 }
 

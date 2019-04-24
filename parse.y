@@ -35,12 +35,14 @@ do {								\
 } while (0)
 
 #define	SYMBOL_ADD_STATEMENT(stmt)	symbol_add_statement(document, (stmt))
+#define	SECTION_ADD_STATEMENT(stmt)	section_add_statement(document, (stmt))
 
 %}
 
 %union {
 	token_t *token;
 	statement_t *statement;
+	struct section_args section_args;
 }
 
 %token <token> LABEL LLABEL TOKEN SPACE NEWLINE SEMICOLON COMMA
@@ -55,10 +57,12 @@ do {								\
 
 %token <token> COMMENT
 
-%type <token> tokens_comma tokens_space tokens directive_pop_stack 
-%type <token> directive_section nonsymbol_directive symbol_directive
+%type <token> tokens_comma tokens_space tokens file_directive
+%type <token> directive_section directive_sections section_directive symbol_directive
 %type <token> symbol_directive_or_tokens labels_tokens label
 %type <token> semicolons_or_comment_or_newline comment_or_newline semicolons
+
+%type <section_args> section_args
 
 %type <statement> labels statement_without_label statement_maybe_labels
 %type <statement> statement statements aux_directive
@@ -89,33 +93,54 @@ tokens:
 	|	TOKEN
 	;
 
-directive_pop_stack:
-		DIRECTIVE_PREVIOUS { PREVIOUSSECTION($$); }
-	|	DIRECTIVE_POPSECTION	{ POPSECTION($$); }
+section_args:
+		%empty { memset(&$$, 0, sizeof($$)); }
+	|	COMMA TOKEN[flags] COMMA TOKEN[type] COMMA TOKEN[arguments] {
+			$$.flags = $flags;
+			$$.type = $type;
+			$$.arguments = $arguments;
+		}
+	|	COMMA TOKEN[flags] COMMA TOKEN[type] {
+			$$.flags = $flags;
+			$$.type = $type;
+			$$.arguments = NULL;
+		}
+	|	COMMA TOKEN[flags] {
+			$$.flags = $flags;
+			$$.type = NULL;
+			$$.arguments = NULL;
+		}
 	;
 
 directive_section:
-		DIRECTIVE_SECTION tokens_comma[args] {
-			SETSECTION($args->txt, $$);
+		DIRECTIVE_SECTION TOKEN[name] section_args {
+			SETSECTIONWITHARGS($name->txt, $$, $section_args);
 		}
+	|	DIRECTIVE_PUSHSECTION TOKEN[name] section_args {
+			SETSECTIONWITHARGS($name->txt, $$, $section_args);
+		}
+	;
+
+directive_sections:
+		directive_section
 	|	DIRECTIVE_TEXT { SETSECTION(".text", $$); }
 	|	DIRECTIVE_DATA { SETSECTION(".data", $$); }
 	|	DIRECTIVE_BSS  { SETSECTION(".bss", $$); }
-	|	DIRECTIVE_PUSHSECTION tokens_comma[args] {
-			SETSECTION($args->txt, $$);
-		}
 	|	DIRECTIVE_SUBSECTION TOKEN {
+			YYERROR;
 		}
-	|	directive_pop_stack
+	|	DIRECTIVE_PREVIOUS { PREVIOUSSECTION($$); }
+	|	DIRECTIVE_POPSECTION	{ POPSECTION($$); }
 	;
 
-nonsymbol_directive:
+file_directive:
+		DIRECTIVE_IDENT TOKEN
+	;
+
+section_directive:
 		DIRECTIVE_FILE tokens_space
-
-
-	|	directive_section
+	|	directive_sections
 	|	DIRECTIVE_ALIGN TOKEN
-	|	DIRECTIVE_IDENT TOKEN
 	;
 
 symbol_directive:
@@ -180,14 +205,18 @@ symbol_directive_or_tokens:
 	;
 
 statement_without_label:
-		symbol_directive_or_tokens[statement_tokens] {
+		symbol_directive_or_tokens {
 			STATEMENT_NEW($1);
 			SYMBOL_ADD_STATEMENT($$);
 		}
-	|	aux_directive
-	|	nonsymbol_directive {
+	|	section_directive {
+			STATEMENT_NEW($1);
+			SECTION_ADD_STATEMENT($$);
+		}
+	|	file_directive {
 			STATEMENT_NEW($1);
 		}
+	|	aux_directive
 	;
 
 labels_tokens:

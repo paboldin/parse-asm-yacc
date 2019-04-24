@@ -38,6 +38,12 @@ printlist(token_t *head)
 #define sibling_next(tkn) list_entry(tkn->siblings.next, token_t, siblings)
 #define sibling_prev(tkn) list_entry(tkn->siblings.prev, token_t, siblings)
 
+struct section_args {
+	token_t *flags;
+	token_t *type;
+	token_t *arguments;
+};
+
 static inline void
 _print_list(token_t *l)
 {

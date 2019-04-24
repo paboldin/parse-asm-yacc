@@ -21,6 +21,14 @@ typedef struct section section_t;
 struct section {
 	const char *name;
 
+#define SECTION_EXECUTABLE	0x1
+#define SECTION_KSYTAB		0x2
+	int type;
+
+	list_t statements;
+
+	struct section_args args;
+
 	section_t *next;
 };
 
@@ -65,13 +73,35 @@ typedef struct document {
 	struct symbol *symbols;
 } document_t;
 
-void setsection(document_t *, const char *, token_t *);
+section_t *setsection(document_t *, const char *, token_t *);
 void previoussection(document_t *, token_t *);
 void popsection(document_t *, token_t *);
 
-#define SETSECTION(name, token)	setsection(document, (name), (token))
+void section_set_args(section_t *section, struct section_args args);
+
+static inline
+section_t *setsectionwithargs(document_t *document, const char *name,
+			      token_t *token, struct section_args args)
+{
+	section_t *section;
+
+	section = setsection(document, name, token);
+	section_set_args(section, args);
+
+	return section;
+}
+
+static inline
+int is_data_sect(section_t *section)
+{
+	return section->type & SECTION_EXECUTABLE;
+}
+
+#define SETSECTION(name, token)		setsection(document, (name), (token))
+#define SETSECTIONWITHARGS(name, token, args) setsectionwithargs(document, (name), (token), (args))
 #define PREVIOUSSECTION(token)	previoussection(document, (token))
 #define POPSECTION(token)	popsection(document, (token))
+
 
 struct symbol *getsymbol(document_t *, const char *name);
 struct symbol *setsymbol(document_t *, const char *name);
@@ -110,6 +140,7 @@ document_t *document_new(void);
 
 statement_t *statement_new(document_t *, token_t *, token_t *);
 void symbol_add_statement(document_t *, statement_t *);
+void section_add_statement(document_t *, statement_t *);
 
 void link_token(document_t *document, token_t *token);
 
