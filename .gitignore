@@ -1,6 +1,7 @@
 # compile output
 *.o
 ./parser
+./gensrc
 ./tags
 
 # bison output

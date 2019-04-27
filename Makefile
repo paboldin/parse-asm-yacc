@@ -6,20 +6,29 @@ CFLAGS += --coverage -pg
 LDLIBS += -lgcov
 endif
 
-all: parser
+LDLIBS += -lfl -ly
+
+all: parser gensrc
+
+COMMON_OBJS := y.tab.o lex.yy.o document.o
 
 tests: all
 	./tests/runtests.sh
 
-parser: y.tab.o y.tab.h lex.yy.o document.o parser.o
-	gcc -g -o $@ $^ -lfl -ly $(LDFLAGS)
+parser: parser.o $(COMMON_OBJS)
+	$(LINK.o) $^ $(LDLIBS) -o $@
 
-document.o: document.h
+gensrc: gensrc.o $(COMMON_OBJS)
+	$(LINK.o) $^ $(LDLIBS) -o $@
 
-y.tab.c y.tab.h: asm.y parse.h
+parser.o: y.tab.h
+
+document.o: document.h parse.h
+
+y.tab.c y.tab.h: asm.y
 	yacc --verbose -d $<
 
-y.tab.o: document.h
+y.tab.o: document.h parse.h
 
 lex.yy.c: asm.l
 	flex $^
