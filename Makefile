@@ -45,5 +45,8 @@ coverage:
 	lcov -r ex_test.info -o ex_test.info '*/lex.yy.c' '*/y.tab.c'
 	genhtml -o coverage-report ex_test.info
 
+valgrind:
+	make tests PARSER_PATH="valgrind --track-origins=yes $(CURDIR)/parser"
+
 clean:
 	rm -f $(ALL_TARGETS) *.gcno *.gcda
