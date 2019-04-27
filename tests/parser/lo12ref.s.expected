@@ -1,0 +1,5 @@
+(TOKEN)	str(TOKEN)	w1(COMMA),(TOKEN) [(TOKEN)x2(COMMA),(TOKEN) #:lo12:.LANCHOR0(TOKEN)]
+(TOKEN)	str(TOKEN)	w1(COMMA),(TOKEN) [(TOKEN) x2(COMMA),(TOKEN) x2(TOKEN) ]
+section: name = .text, flags = x
+	str	w1, [x2, #:lo12:.LANCHOR0]
+	str	w1, [ x2, x2 ]

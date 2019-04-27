@@ -1,0 +1,7 @@
+(DIRECTIVE_STRING)	.ascii(TOKEN)	"test;me"
+(DIRECTIVE_STRING) .ascii(TOKEN) "or me"
+(DIRECTIVE_STRING) .ascii(TOKEN)	"hello there"
+(TOKEN)	somecode
+section: name = .text, flags = x
+	.ascii	"test;me";;; .ascii "or me"; .ascii	"hello there"
+	somecode;

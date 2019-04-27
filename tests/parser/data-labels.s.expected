@@ -1,0 +1,50 @@
+(DIRECTIVE_DATA)	.data
+(DIRECTIVE_ALIGN)	.align(TOKEN) 32
+(DIRECTIVE_TYPE)	.type(TOKEN)	predefined_sections(COMMA),(TOKEN) @object
+(DIRECTIVE_SIZE)	.size(TOKEN)	predefined_sections(COMMA),(TOKEN) 1400
+(LABEL)predefined_sections
+(DIRECTIVE_DATA_DEF)	.quad	.LC10
+(DIRECTIVE_DATA_DEF)	.zero	48
+(DIRECTIVE_LOCAL)	.local(TOKEN)	abc
+(DIRECTIVE_COMM)	.comm(TOKEN)	abc(COMMA),(TOKEN)8(COMMA),(TOKEN)8
+(DIRECTIVE_DATA_DEF)	.zero	48
+(DIRECTIVE_SECTION)	.section(TOKEN) .rodata
+(LABEL).LC10
+(DIRECTIVE_DATA_DEF)	.byte	1
+symbol: name = abc, type = unknown
+symbol: section = .data
+symbol: globl_or_local = (l8)(DIRECTIVE_LOCAL)	.local(TOKEN)	abc
+symbol: comm = (l9)(DIRECTIVE_COMM)	.comm(TOKEN)	abc(COMMA),(TOKEN)8(COMMA),(TOKEN)8
+(l8)(DIRECTIVE_LOCAL)	.local(TOKEN)	abc
+(l9)(DIRECTIVE_COMM)	.comm(TOKEN)	abc(COMMA),(TOKEN)8(COMMA),(TOKEN)8
+symbol: name = predefined_sections, type = object
+symbol: section = .data
+symbol: label = (l5)(LABEL)predefined_sections
+symbol: type = (l3)(DIRECTIVE_TYPE)	.type(TOKEN)	predefined_sections(COMMA),(TOKEN) @object
+symbol: size = (l4)(DIRECTIVE_SIZE)	.size(TOKEN)	predefined_sections(COMMA),(TOKEN) 1400
+(l3)(DIRECTIVE_TYPE)	.type(TOKEN)	predefined_sections(COMMA),(TOKEN) @object
+(l4)(DIRECTIVE_SIZE)	.size(TOKEN)	predefined_sections(COMMA),(TOKEN) 1400
+(l5)(LABEL)predefined_sections
+(l6)(DIRECTIVE_DATA_DEF)	.quad	.LC10
+(l7)(DIRECTIVE_DATA_DEF)	.zero	48
+(l10)(DIRECTIVE_DATA_DEF)	.zero	48
+section: name = .rodata, flags = 
+(l11)(DIRECTIVE_SECTION)	.section(TOKEN) .rodata
+section: name = .data, flags = 
+(l1)(DIRECTIVE_DATA)	.data
+(l2)(DIRECTIVE_ALIGN)	.align(TOKEN) 32
+section: name = .text, flags = x
+	.data
+	.align 32
+	.type	predefined_sections, @object
+	.size	predefined_sections, 1400
+predefined_sections:
+	.quad	.LC10
+	.zero	48
+	.local	abc
+	.comm	abc,8,8
+	.zero	48
+	.section .rodata
+
+.LC10:
+	.byte	1

@@ -1,0 +1,20 @@
+(DIRECTIVE_DATA)	.data
+(LABEL)abc(LABEL) def(LABEL) ghj
+(TOKEN) nop
+(LABEL)abc(LABEL) def(LABEL) ghj
+symbol: name = ;, type = unknown
+symbol: section = .data
+symbol: label = (l4)(LABEL)abc(LABEL) def(LABEL) ghj
+(l4)(LABEL)abc(LABEL) def(LABEL) ghj
+symbol: name = ghj, type = unknown
+symbol: section = .data
+symbol: label = (l2)(LABEL)abc(LABEL) def(LABEL) ghj
+(l2)(LABEL)abc(LABEL) def(LABEL) ghj
+(l2)(TOKEN) nop
+section: name = .data, flags = 
+(l1)(DIRECTIVE_DATA)	.data
+section: name = .text, flags = x
+	.data
+abc: def: ghj: nop;
+
+abc: def: ghj:

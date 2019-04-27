@@ -9,10 +9,7 @@ endif
 all: parser
 
 tests: all
-	@for f in $$(find tests -iname \*.s); do \
-		echo running $$f; \
-		./parser $$f || break; \
-	done
+	./tests/runtests.sh
 
 parser: y.tab.o y.tab.h lex.yy.o document.o parser.o
 	gcc -g -o $@ $^ -lfl -ly $(LDFLAGS)

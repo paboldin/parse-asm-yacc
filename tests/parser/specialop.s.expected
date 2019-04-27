@@ -1,0 +1,10 @@
+(LABEL)	foobar
+(TOKEN)	movq(TOKEN)	%rsp(COMMA),(TOKEN)%rbp
+symbol: name = foobar, type = unknown
+symbol: section = .text
+symbol: label = (l1)(LABEL)	foobar
+(l1)(LABEL)	foobar
+(l2)(TOKEN)	movq(TOKEN)	%rsp(COMMA),(TOKEN)%rbp
+section: name = .text, flags = x
+	foobar:
+	movq	%rsp,%rbp

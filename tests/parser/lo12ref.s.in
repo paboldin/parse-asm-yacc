@@ -1,0 +1,2 @@
+	str	w1, [x2, #:lo12:.LANCHOR0]
+	str	w1, [ x2, x2 ]
