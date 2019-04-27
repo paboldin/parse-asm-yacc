@@ -51,6 +51,7 @@ void link_token(document_t *document, token_t *token)
 	switch (token->type) {
 	case NEWLINE:
 	case COMMENT:
+	case SEMICOLON:
 		break;
 	default:
 		list_append(&document->statement_tokens, &token->siblings);
