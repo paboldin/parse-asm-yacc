@@ -1,8 +1,20 @@
+# compile output
 *.o
-y.dot
-y.output
-y.tab.[cho]
-lex.yy.c
-flex.h
-parser
-tags
+./parser
+./tags
+
+# bison output
+./y.dot
+./y.output
+./y.tab.[cho]
+
+# flex output
+./lex.yy.c
+./flex.h
+
+# coverage output
+./coverage-report
+*.gcno
+*.gcda
+./gmon.out
+./ex_test.info
