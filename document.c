@@ -519,16 +519,23 @@ _document_update_structs(document_t *document)
 	return;
 }
 
-/* TODO rename to document_parse_FILE and add document_parse_path */
-document_t *document_parse_file(FILE *fh)
+document_t *document_parse_content(const char *content,
+				   size_t size)
 {
 	document_t *document;
 	yyscan_t scanner;
 
 	yylex_init(&scanner);
 
-	yyset_in(fh, scanner);
 	document = document_new();
+
+	document->content = content;
+	document->size = size;
+
+
+	yy_scan_bytes(content, size, scanner);
+	yyset_lineno(1, scanner);
+
 	if (yyparse(scanner, document))
 		goto err;
 
@@ -542,6 +549,63 @@ err:
 	document_free(document);
 	yylex_destroy(scanner);
 	return NULL;
+}
+
+document_t *document_parse_FILE(FILE *fh)
+{
+	char *content, *p;
+	size_t size, read, toread;
+	int rv;
+
+	rv = fseek(fh, 0, SEEK_END);
+	if (rv < 0)
+		return NULL;
+
+	size = ftell(fh);
+
+	p = content = malloc(size);
+	if (content == NULL)
+		return NULL;
+
+	rv = fseek(fh, 0, SEEK_SET);
+	if (rv < 0)
+		goto err_read;
+
+	toread = size;
+
+	while (toread && !feof(fh)) {
+		read = fread(p, 1, toread, fh);
+		if (read == 0 && ferror(fh))
+			goto err_read;
+		p += read;
+		toread -= read;
+	}
+
+	if (p != content + size)
+		goto err_read;
+
+	return document_parse_content(content, size);
+
+err_read:
+	/* TODO save errno */
+	free(content);
+	return NULL;
+}
+
+document_t *document_parse_path(const char *fname)
+{
+	FILE *fh;
+	document_t *document;
+
+	fh = fopen(fname, "r");
+	if (fh == NULL)
+		return NULL;
+
+	document = document_parse_FILE(fh);
+
+	fclose(fh);
+
+	return document;
 }
 
 void document_free(document_t *document)
@@ -572,5 +636,6 @@ void document_free(document_t *document)
 		free(stmt);
 	}
 
+	free((void *)document->content);
 	free(document);
 }

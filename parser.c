@@ -15,21 +15,12 @@ int main(int argc, char **argv) {
 	}
 
 	for (i = 1; i < argc; i++) {
-		FILE *fh;
 		document_t *document;
 
-		fh = fopen(argv[i], "r");
-		if (fh == NULL) {
-			fprintf(stderr, "fopen: %s %s\n", strerror(errno), argv[i]);
-			abort();
-		}
-
-		document = document_parse_file(fh);
+		document = document_parse_path(argv[i]);
 		if (document) {
 			document_print(document);
 			document_free(document);
 		}
-
-		fclose(fh);
 	}
 }

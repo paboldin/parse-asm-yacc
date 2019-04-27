@@ -34,7 +34,9 @@ $(O)parser: $(O)parser.o $(COMMON_OBJS)
 $(O)gensrc: $(O)gensrc.o $(COMMON_OBJS)
 	$(LINK.o) $^ $(LDLIBS) -o $@
 
-$(O)parser.o: y.tab.h
+$(O)parser.o: document.h y.tab.h
+
+$(O)gensrc.o: document.h y.tab.h
 
 $(O)document.o: document.h parse.h
 
@@ -58,7 +60,10 @@ coverage:
 	genhtml -o coverage-report ex_test.info
 
 valgrind:
-	make tests PARSER_PATH="valgrind --track-origins=yes $(CURDIR)/parser"
+	make tests PARSER_PATH="valgrind -q --error-exitcode=1 $(CURDIR)/parser"
+
+valgrind-slow:
+	make tests PARSER_PATH="valgrind -q --error-exitcode=1 --leak-check=full --track-origins=yes $(CURDIR)/parser"
 
 clean:
 	rm -f $(ALL_TARGETS) *.gcno *.gcda

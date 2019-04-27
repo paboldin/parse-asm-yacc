@@ -16,25 +16,6 @@ void usage(FILE *fh)
 	exit(fh == stderr ? -1 : 0);
 }
 
-/* TODO merge with parser.c */
-static document_t *parse_file(const char *fname)
-{
-	FILE *fh;
-	document_t *document;
-
-	fh = fopen(fname, "r");
-	if (fh == NULL) {
-		fprintf(stderr, "fopen: %s %s\n", strerror(errno), fname);
-		abort();
-	}
-
-	document = document_parse_file(fh);
-
-	fclose(fh);
-
-	return document;
-}
-
 int main(int argc, char **argv) {
 	int i;
 	document_t *left, *right;
@@ -50,8 +31,8 @@ int main(int argc, char **argv) {
 	if (argc != 2)
 		usage(stderr);
 
-	left = parse_file(argv[1]);
-	right = parse_file(argv[2]);
+	left = document_parse_path(argv[1]);
+	right = document_parse_path(argv[2]);
 
 	document_free(left);
 	document_free(right);

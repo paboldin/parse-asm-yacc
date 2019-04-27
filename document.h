@@ -62,6 +62,9 @@ struct symbol {
 };
 
 typedef struct document {
+	const char *content;
+	size_t size;
+
 	/* all statements */
 	list_t statements;
 
@@ -156,7 +159,9 @@ int is_data_sect(section_t *section)
 /* Document functions */
 
 document_t *document_new(void);
-document_t *document_parse_file(FILE *fh);
+document_t *document_parse_path(const char *path);
+document_t *document_parse_FILE(FILE *fh);
+document_t *document_parse_content(const char *content, size_t size);
 void document_print(document_t *document);
 void document_free(document_t *document);
 void document_print_dbgfilter(document_t *document);
