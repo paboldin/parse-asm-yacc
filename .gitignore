@@ -1,21 +1,21 @@
 # compile output
 *.o
-./parser
-./gensrc
-./tags
+parser
+gensrc
+tags
 
 # bison output
-./y.dot
-./y.output
-./y.tab.[cho]
+y.dot
+y.output
+y.tab.[cho]
 
 # flex output
-./lex.yy.c
-./flex.h
+lex.yy.c
+flex.h
 
 # coverage output
-./coverage-report
+coverage-report
 *.gcno
 *.gcda
-./gmon.out
-./ex_test.info
+gmon.out
+ex_test.info
