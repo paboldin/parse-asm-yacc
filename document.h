@@ -4,6 +4,7 @@
 
 #include "list.h"
 #include "parse.h"
+#include "rbtree.h"
 
 typedef struct statement {
 	/* list of the statements, links to document_t->statements */
@@ -52,7 +53,12 @@ struct symbol {
 	list_t statements;
 
 	section_t *section;
+
+	/* LRU for parsing */
 	struct symbol *next;
+	/* Tree for search */
+	struct rb_node node;
+#define rb_symbol_entry(n) rb_entry((n), struct symbol, node)
 };
 
 typedef struct document {
@@ -69,8 +75,11 @@ typedef struct document {
 
 	struct symbol *current_symbol;
 
+	/* RB-tree with symbols */
+	struct rb_root symbols;
+
 	/* LRU with symbols */
-	struct symbol *symbols;
+	struct symbol *symbols_lru;
 } document_t;
 
 /* Token functions */
@@ -88,6 +97,7 @@ token_t *statement_last_token(statement_t *);
 
 /* Symbol functions */
 
+struct symbol *document_find_symbol(document_t *, const char *name);
 struct symbol *document_get_symbol(document_t *, const char *name);
 struct symbol *document_set_symbol(document_t *, const char *name);
 

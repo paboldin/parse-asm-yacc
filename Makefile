@@ -10,7 +10,7 @@ LDLIBS += -lfl -ly
 
 all: parser gensrc
 
-COMMON_OBJS := y.tab.o lex.yy.o document.o
+COMMON_OBJS := y.tab.o lex.yy.o document.o rbtree.o
 
 tests: all
 	./tests/runtests.sh

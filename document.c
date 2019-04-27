@@ -8,8 +8,9 @@
 
 #include "parse.h"
 #include "document.h"
-#include "flex.h"
+#include "rbtree.h"
 
+#include "flex.h"
 #include "y.tab.h"
 
 
@@ -158,9 +159,29 @@ struct symbol *symbol_new(const char *name, section_t *section)
 	return h;
 }
 
+static
+void symbol_free(struct symbol *symbol)
+{
+	free((void *)symbol->name);
+	free(symbol);
+}
+
+struct symbol *document_find_symbol(document_t *document, const char *name)
+{
+	struct rb_node *n;
+	if (rb_empty(&document->symbols))
+		return NULL;
+
+	n = rb_search_node(&document->symbols, (unsigned long)name);
+	if (n)
+		return rb_symbol_entry(n);
+
+	return NULL;
+}
+
 struct symbol *document_get_symbol(document_t *document, const char *name)
 {
-	struct symbol *h = document->symbols, *p = NULL;
+	struct symbol *h = document->symbols_lru, *p = NULL;
 
 	while (h != NULL) {
 		if (!strcmp(h->name, name)) {
@@ -175,11 +196,11 @@ struct symbol *document_get_symbol(document_t *document, const char *name)
 
 	h = symbol_new(name, document->section);
 link:
-	if (h != document->symbols)
-		h->next = document->symbols;
-	document->symbols = h;
+	if (h != document->symbols_lru)
+		h->next = document->symbols_lru;
+	document->symbols_lru = h;
 
-	return document->symbols;
+	return document->symbols_lru;
 }
 
 struct symbol *document_set_symbol(document_t *document, const char *name)
@@ -257,12 +278,55 @@ void symbol_print(struct symbol *s)
 	}
 }
 
+static
+int symbol_cmp_func(struct rb_node *node, unsigned long key)
+{
+	return strcmp(rb_symbol_entry(node)->name,
+		      (char *)key);
+}
+
+static
+void symbol_free_node_func(struct rb_node *node)
+{
+	symbol_free(rb_symbol_entry(node));
+}
+
+
 /* Section code */
 
 static inline
 void reset_symbols(document_t *document)
 {
 	document->current_symbol = NULL;
+}
+
+static
+section_t *section_new(const char *name)
+{
+	section_t *h;
+
+	h = malloc(sizeof(*h));
+	if (h == NULL)
+		abort();
+
+	h->name = strdup(name);
+
+	h->type = 0;
+	if (STREQ(name, ".text"))
+		h->type |= SECTION_EXECUTABLE;
+
+	memset(&h->args, 0, sizeof(h->args));
+	h->next = NULL;
+	list_init(&h->statements);
+
+	return h;
+}
+
+static
+void section_free(section_t *section)
+{
+	free((void *)section->name);
+	free(section);
 }
 
 static
@@ -281,21 +345,7 @@ section_t *document_get_section(document_t *document, const char *name)
 		h = h->next;
 	}
 
-	h = malloc(sizeof(*h));
-	if (h == NULL)
-		abort();
-
-	h->name = strdup(name);
-
-	h->type = 0;
-	if (STREQ(name, ".text"))
-		h->type |= SECTION_EXECUTABLE;
-
-	memset(&h->args, 0, sizeof(h->args));
-	h->next = NULL;
-	list_init(&h->statements);
-
-
+	h = section_new(name);
 link:
 	if (h != document->sections)
 		h->next = document->sections;
@@ -381,8 +431,12 @@ document_new(void)
 	list_init(&document->statement_tokens);
 
 	document->section = document->prev_section = NULL;
-	document->symbols = NULL;
 	document->sections = NULL;
+	document->symbols_lru = NULL;
+
+	rb_init(&document->symbols,
+		symbol_cmp_func,
+		symbol_free_node_func);
 
 	reset_symbols(document);
 
@@ -437,7 +491,7 @@ void document_print_statements(document_t *document)
 
 void document_print_symbols(document_t *document)
 {
-	struct symbol *h = document->symbols;
+	struct symbol *h = document->symbols_lru;
 	section_t *section = document->sections;
 	while (h) {
 		symbol_print(h);
@@ -450,6 +504,21 @@ void document_print_symbols(document_t *document)
 	}
 }
 
+static void
+_document_update_structs(document_t *document)
+{
+	struct symbol *symbol = document->symbols_lru;
+
+	while (symbol) {
+		rb_insert_node(&document->symbols, &symbol->node,
+			       (unsigned long)symbol->name);
+		symbol = symbol->next;
+	}
+
+	return;
+}
+
+/* TODO rename to document_parse_FILE and add document_parse_path */
 document_t *document_parse_file(FILE *fh)
 {
 	document_t *document;
@@ -460,34 +529,40 @@ document_t *document_parse_file(FILE *fh)
 	yyset_in(fh, scanner);
 	document = document_new();
 	if (yyparse(scanner, document))
-		return NULL;
+		goto err;
 
 	yylex_destroy(scanner);
 
+	_document_update_structs(document);
+
 	return document;
+
+err:
+	document_free(document);
+	yylex_destroy(scanner);
+	return NULL;
 }
 
 void document_free(document_t *document)
 {
-	struct symbol *symbol = document->symbols, *nsymbol;
+	struct symbol *symbol = document->symbols_lru, *nsymbol;
 	struct section *section = document->sections, *nsection;
 	statement_t *stmt, *tstmt;
 	token_t *tkn, *ttkn;
 
 	while (symbol) {
 		nsymbol = symbol->next;
-		free((void *)symbol->name);
-		free(symbol);
+		symbol_free(symbol);
 		symbol = nsymbol;
 	}
 
 	while (section) {
 		nsection = section->next;
-		free((void *)section->name);
-		free(section);
+		section_free(section);
 		section = nsection;
 	}
 
+	/* TODO add document_for_each_{token,statement} */
 	list_for_each_entry_safe(tkn, ttkn, &document->tokens, list) {
 		free(tkn);
 	}
