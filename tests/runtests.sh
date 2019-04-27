@@ -4,12 +4,13 @@
 set -x
 
 SCRIPT_PATH=$(dirname $0)
+O=${O:-$SCRIPT_PATH/..}
 
 if test -z "$PARSER_PATH"; then
-  PARSER_PATH=$SCRIPT_PATH/../parser
+  PARSER_PATH=$O/parser
 fi
 if test -z "$GENSRC_PATH"; then
-  GENSRC_PATH=$SCRIPT_PATH/../gensrc
+  GENSRC_PATH=$O/gensrc
 fi
 
 run_test_parser() {
