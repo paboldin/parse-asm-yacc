@@ -1,9 +1,6 @@
 
 
-ifeq ($(NDEBUG),)
-CFLAGS := -DYYDEBUG=1
-endif
-CFLAGS += -DYYERROR_VERBOSE=1 -g
+CFLAGS += -DYYDEBUG -DYYERROR_VERBOSE=1 -g
 ifneq ($(COVERAGE),)
 CFLAGS += --coverage -pg
 LDLIBS += -lgcov
@@ -17,17 +14,17 @@ tests: all
 		./parser $$f || break; \
 	done
 
-parser: y.tab.o y.tab.h lex.yy.o document.o main.o
+parser: y.tab.o y.tab.h lex.yy.o document.o parser.o
 	gcc -g -o $@ $^ -lfl -ly $(LDFLAGS)
 
 document.o: document.h
 
-y.tab.c y.tab.h: parse.y parse.h
+y.tab.c y.tab.h: asm.y parse.h
 	yacc --verbose -d $<
 
 y.tab.o: document.h
 
-lex.yy.c: parse.l
+lex.yy.c: asm.l
 	flex $^
 
 coverage:
@@ -39,4 +36,4 @@ coverage:
 	genhtml -o coverage-report ex_test.info
 
 clean:
-	rm -f y.tab.c y.tab.h lex.yy.c parser document.o y.tab.o main.o *.gcno *.gcda
+	rm -f y.tab.c y.tab.h lex.yy.c parser document.o y.tab.o parser.o *.gcno *.gcda

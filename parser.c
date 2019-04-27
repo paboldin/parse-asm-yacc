@@ -7,16 +7,20 @@
 
 int main(int argc, char **argv) {
 	int i;
-#if YYDEBUG
-	yydebug = 1;
-#endif
+
+	if (argc > 1 && !strcmp(argv[1], "--debug")) {
+		yydebug = 1;
+		argv ++;
+		argc --;
+	}
+
 	for (i = 1; i < argc; i++) {
 		FILE *fh;
 		document_t *document;
 
 		fh = fopen(argv[i], "r");
 		if (fh == NULL) {
-			perror("fopen");
+			fprintf(stderr, "fopen: %s %s\n", strerror(errno), argv[i]);
 			abort();
 		}
 
