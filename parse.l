@@ -110,7 +110,7 @@ token_t *new_token(int type, yyscan_t scanner, document_t *document)
 	list_append(&document->tokens, &t->list);
 	link_token(document, t);
 
-	strcpy(t->buf, text);
+	strncpy(t->buf, text, l);
 	t->txt = t->buf + sl;
 
 	return t;
