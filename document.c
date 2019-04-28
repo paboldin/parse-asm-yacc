@@ -627,7 +627,6 @@ void document_free(document_t *document)
 		section = nsection;
 	}
 
-	/* TODO add document_for_each_{token,statement} */
 	list_for_each_entry_safe(tkn, ttkn, &document->tokens, list) {
 		free(tkn);
 	}

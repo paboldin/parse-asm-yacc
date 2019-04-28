@@ -98,6 +98,9 @@ void document_section_add_statement(document_t *, statement_t *);
 token_t *statement_first_token(statement_t *);
 token_t *statement_last_token(statement_t *);
 
+#define statement_for_each_token(tkn, stmt)	\
+	list_for_each_entry(tkn, &stmt->tokens, siblings)
+
 /* Symbol functions */
 
 struct symbol *document_find_symbol(document_t *, const char *name);
@@ -167,5 +170,13 @@ void document_free(document_t *document);
 void document_print_dbgfilter(document_t *document);
 void document_print_symbols(document_t *document);
 void document_print_statements(document_t *tree);
+
+#define document_statement_next(stmt)	\
+	list_entry(stmt->list.next, statement_t, list)
+
+#define document_for_each_token(token, document) \
+	list_for_each_entry(token, &document->tokens, list)
+#define document_for_each_statement(stmt, document) \
+	list_for_each_entry(stmt, &document->statements, list)
 
 #endif /* DOCUMENT_H_INCLUDED */
