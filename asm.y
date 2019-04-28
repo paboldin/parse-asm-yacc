@@ -64,15 +64,15 @@ do {								\
 
 %token <token> COMMENT
 
-%type <token> tokens_comma tokens_space tokens file_directive
-%type <token> directive_section directive_sections section_directive symbol_directive
+%type <token> tokens_comma tokens_space tokens
+%type <token> file_part_directive
+%type <token> change_section_directive section_part_directive symbol_part_directive
 %type <token> symbol_directive_or_tokens labels_tokens label
-%type <token> semicolons_or_comment_or_newline comment_or_newline semicolons
 
 %type <section_args> section_args
 
 %type <statement> labels statement_without_label statement_maybe_labels
-%type <statement> statement statements aux_directive
+%type <statement> statement statements symbol_info_directive
 
 %start file
 
@@ -120,20 +120,16 @@ section_args:
 		}
 	;
 
-directive_section:
-		DIRECTIVE_SECTION TOKEN[name] section_args {
+change_section_directive:
+		DIRECTIVE_TEXT { SETSECTION(".text"); }
+	|	DIRECTIVE_DATA { SETSECTION(".data"); }
+	|	DIRECTIVE_BSS  { SETSECTION(".bss"); }
+	|	DIRECTIVE_SECTION TOKEN[name] section_args {
 			SETSECTIONWITHARGS($name->txt, $section_args);
 		}
 	|	DIRECTIVE_PUSHSECTION TOKEN[name] section_args {
 			SETSECTIONWITHARGS($name->txt, $section_args);
 		}
-	;
-
-directive_sections:
-		directive_section
-	|	DIRECTIVE_TEXT { SETSECTION(".text"); }
-	|	DIRECTIVE_DATA { SETSECTION(".data"); }
-	|	DIRECTIVE_BSS  { SETSECTION(".bss"); }
 	|	DIRECTIVE_SUBSECTION TOKEN {
 			YYERROR;
 		}
@@ -141,24 +137,24 @@ directive_sections:
 	|	DIRECTIVE_POPSECTION	{ POPSECTION(); }
 	;
 
-file_directive:
+file_part_directive:
 		DIRECTIVE_IDENT TOKEN
 	;
 
-section_directive:
+section_part_directive:
 		DIRECTIVE_FILE tokens_space
-	|	directive_sections
+	|	change_section_directive
 	|	DIRECTIVE_ALIGN TOKEN
 	;
 
-symbol_directive:
+symbol_part_directive:
 		DIRECTIVE_DATA_DEF
 	|	DIRECTIVE_STRING TOKEN
 	|	DIRECTIVE_CFI_IGNORED
 	|	DIRECTIVE_LOC_IGNORED
 	;
 
-aux_directive:
+symbol_info_directive:
 		DIRECTIVE_WEAK	TOKEN[symbol] {
 			STATEMENT_NEW($1);
 			symbol_set_weak(document, $symbol->txt, $$);
@@ -202,13 +198,8 @@ aux_directive:
 	;
 
 
-label:
-		LABEL
-	|	LLABEL
-	;
-
 symbol_directive_or_tokens:
-		symbol_directive
+		symbol_part_directive
 	|	tokens
 	;
 
@@ -217,14 +208,19 @@ statement_without_label:
 			STATEMENT_NEW($1);
 			SYMBOL_ADD_STATEMENT($$);
 		}
-	|	section_directive {
+	|	section_part_directive {
 			STATEMENT_NEW($1);
 			SECTION_ADD_STATEMENT($$);
 		}
-	|	file_directive {
+	|	file_part_directive {
 			STATEMENT_NEW($1);
 		}
-	|	aux_directive
+	|	symbol_info_directive
+	;
+
+label:
+		LABEL
+	|	LLABEL
 	;
 
 labels_tokens:
@@ -250,40 +246,24 @@ statement_maybe_labels:
 statement:
 		statement_maybe_labels;
 
-semicolons:
+single_end_of_statement:
 		SEMICOLON
-	|	semicolons SEMICOLON
-	;
-
-/* Only use LEFT RECURSION HERE, as `statement`s are linked on creation */
-statements:
-		statements[head] semicolons statement
-	|	statement
-	;
-
-comment_or_newline:
-		COMMENT
 	|	NEWLINE
 	|	COMMENT NEWLINE
 	;
 
-semicolons_or_comment_or_newline:
-		semicolons comment_or_newline
-	|	comment_or_newline
-	;
+end_of_statement:
+		single_end_of_statement
+	|	end_of_statement single_end_of_statement;
 
-line:
-		statements semicolons_or_comment_or_newline
-	|	semicolons_or_comment_or_newline {}
-	;
-
-lines:
-		lines line {}
-	|	line
+/* Only use LEFT RECURSION HERE, as `statement`s are linked on creation */
+statements:
+		statements[head] statement end_of_statement
+	|	statement end_of_statement
 	;
 
 file:
-		lines {
+		statements {
 			SETSECTION(NULL);
 		}
 	;
