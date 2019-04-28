@@ -64,7 +64,9 @@ void link_token(document_t *document, token_t *token)
 statement_t *statement_new(document_t *document, token_t *token, token_t *lookahead)
 {
 	statement_t *stmt;
-	token_t *t;
+	token_t *token_first, *token_last;
+	const char *str;
+	size_t length;
 
 	stmt = malloc(sizeof(*stmt));
 	if (stmt == NULL)
@@ -84,6 +86,14 @@ statement_t *statement_new(document_t *document, token_t *token, token_t *lookah
 	}
 	list_append(&stmt->tokens, &token->siblings);
 
+	/* Init str */
+	token_first = statement_first_token(stmt);
+	token_last = statement_last_token(stmt);
+
+	str = document->content + token_first->offset;
+	length = token_last->offset + token_last->length - token_first->offset;
+	stmt->str = strndup(str, length);
+
 	/* link statement */
 	list_init(&stmt->list);
 	list_append(&document->statements, &stmt->list);
@@ -94,13 +104,18 @@ statement_t *statement_new(document_t *document, token_t *token, token_t *lookah
 	return stmt;
 }
 
+void statement_free(statement_t *stmt)
+{
+	free((void *)stmt->str);
+	free(stmt);
+}
+
 void statement_print(statement_t *stmt, const char *prefix)
 {
 	if (stmt == NULL)
 		return;
 	print_tokens(list_first_entry(&stmt->tokens, token_t, siblings), prefix);
 }
-
 
 void document_symbol_add_statement(document_t *document, statement_t *stmt)
 {
@@ -435,6 +450,8 @@ document_new(void)
 	document->sections = NULL;
 	document->symbols_lru = NULL;
 
+	document->spclen = document->offset = 0;
+
 	rb_init(&document->symbols,
 		symbol_cmp_func,
 		symbol_free_node_func);
@@ -486,7 +503,7 @@ void document_print_statements(document_t *document)
 	statement_t *stmt;
 
 	list_for_each_entry(stmt, &document->statements, list) {
-		print_tokens(statement_first_token(stmt), NULL);
+		statement_print(stmt, NULL);
 	}
 }
 
@@ -632,7 +649,7 @@ void document_free(document_t *document)
 	}
 
 	list_for_each_entry_safe(stmt, tstmt, &document->statements, list) {
-		free(stmt);
+		statement_free(stmt);
 	}
 
 	free((void *)document->content);

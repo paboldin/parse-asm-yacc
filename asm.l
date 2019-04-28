@@ -10,7 +10,7 @@
 token_t *new_token(int type, yyscan_t scanner, document_t *document);
 #define ENLIST(tkn) {							\
 	yylval->token = new_token(tkn, yyscanner, document);		\
-	yyset_extra(0, yyscanner);					\
+	document->spclen = 0;						\
 	return tkn;							\
 }
 
@@ -20,7 +20,6 @@ token_t *new_token(int type, yyscan_t scanner, document_t *document);
 %option yylineno
 %option reentrant
 %option header-file="flex.h"
-%option extra-type="int"
 
 ALNUM	[A-Za-z0-9_]
 ALNUMP	[A-Za-z0-9_.]
@@ -82,7 +81,7 @@ RESTORNOT	[^;\n]*
 [^ \[\]\t\n;,]+		ENLIST(TOKEN)
 
 
-[ \t]+		{ yyset_extra(yyleng, yyscanner); yymore(); }
+[ \t]+		{ document->spclen = yyleng; yymore(); }
 
 ;	ENLIST(SEMICOLON)
 {SPACE}\n	ENLIST(NEWLINE)
@@ -97,7 +96,7 @@ token_t *new_token(int type, yyscan_t scanner, document_t *document)
 	const char *text = yyget_text(scanner);
 	int lineno = yyget_lineno(scanner);
 	int l = yyget_leng(scanner);
-	int sl = yyget_extra(scanner);
+	int sl = document->spclen;
 
 	t = malloc(sizeof(*t) + l + sl + 2);
 	if (t == NULL) abort();
@@ -113,6 +112,10 @@ token_t *new_token(int type, yyscan_t scanner, document_t *document)
 	t->buf[l] = '\0';
 	strncpy(t->buf, text, l);
 	t->txt = t->buf + sl;
+	t->offset = document->offset;
+	t->length = l;
+
+	document->offset += l;
 
 	return t;
 }

@@ -23,6 +23,7 @@ typedef struct token {
 
 	int type;
 	int lineno;
+	int offset, length;
 	char *txt;
 	char buf[];
 } token_t;

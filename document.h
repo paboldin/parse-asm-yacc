@@ -15,6 +15,9 @@ typedef struct statement {
 
 	/* tokens of statement */
 	list_t tokens;
+
+	/* the whole statement content */
+	const char *str;
 } statement_t;
 
 typedef struct section section_t;
@@ -62,8 +65,12 @@ struct symbol {
 };
 
 typedef struct document {
+	/* All of the file content in one place */
 	const char *content;
 	size_t size;
+
+	/* For tokenizer */
+	int spclen, offset;
 
 	/* all statements */
 	list_t statements;
